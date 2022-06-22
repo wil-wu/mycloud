@@ -135,7 +135,7 @@ class Profile(BaseModel):
     ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='用户')
-    avatar = models.ImageField(upload_to=get_unique_filename, default='uploads/default/user.svg', verbose_name='头像')
+    avatar = models.ImageField(upload_to=get_unique_filename, default='default/user.svg', verbose_name='头像')
     gender = models.CharField(max_length=1, choices=GENDER, blank=True, verbose_name='性别')
     role = models.ForeignKey(Role, on_delete=models.SET(get_deleted_role), verbose_name='角色')
 
