@@ -1,0 +1,145 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="{% static 'pan/css/common.css' %}" rel="stylesheet">
+    {% block styles %}{% endblock %}{# css样式 #}
+    <title>{% block title %}{% endblock %}</title>
+</head>
+<body>
+<header>
+    {# 侧边栏 #}
+    <div class="offcanvas offcanvas-start bg-white border-end-0 shadow-2" data-mdb-scroll="true"
+         data-mdb-backdrop="false" tabindex="-1" id="sidebar" style="width: 240px; height: 100vh; z-index: 1035">
+        <div class="offcanvas-header">
+            <h5 class="offcanvas-title">
+                <a class="icon-link" href="{% url 'pan:index' %}" style="padding: 0.625rem 1.5rem 0.5rem;">
+                    <i class="fab fa-cloudscale fa-3x"></i>
+                </a>
+            </h5>
+            <a class="icon-link d-block d-lg-none" data-mdb-dismiss="offcanvas"
+               style="padding: 0.625rem 1.5rem 0.5rem;">
+                <i class="fas fa-times fa-2x"></i>
+            </a>
+        </div>
+        <div class="offcanvas-body d-flex flex-column mt-5">
+            <div class="flex-shrink-0 nav nav-tabs flex-column align-items-right" id="v-tabs-tab">
+                {% block sidenavs %}
+                    <a class="nav-link fs-6" id="cloudTab" href="{% url 'pan:cloud' %}">
+                        <i class="fas fa-cloud me-2"></i>我的云盘
+                    </a>
+                    <a class="nav-link fs-6" id="historyTab" href="{% url 'pan:history' %}">
+                        <i class="fas fa-history me-2"></i>传输历史
+                    </a>
+                    <a class="nav-link fs-6" id="binTab" href="{% url 'pan:bin' %}">
+                        <i class="fas fa-trash me-2"></i>回收站
+                    </a>
+                {% endblock %}
+            </div>
+            <div class="mt-auto">
+                <div class="card" id="memory">
+                    <div class="card-body">
+                        <div class="card-text">
+                            <i class="fas fa-cog me-2"></i>
+                            <small class="text-muted">
+                                我的容量：<br>
+                                <sapn id="storage"></sapn>
+                                / <span id="used"></span>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {# 侧边栏 #}
+    {# 导航栏 #}
+    <nav class="navbar sidenav navbar-expand-lg navbar-light bg-white fixed-top shadow-2">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" id="sidebarBtn" data-mdb-toggle="offcanvas"
+                    data-mdb-target="#sidebar">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="d-none d-sm-flex input-group w-auto">
+                <input type="search" class="form-control rounded search" placeholder="搜索" autocomplete="off"/>
+                <span class="input-group-text border-0">
+                    <i class="fas fa-search"></i>
+                </span>
+            </div>
+            <div class="navbar-nav flex-row ms-auto align-items-center">
+                <a class="nav-link px-2 dropdown-toggle hidden-arrow" data-mdb-toggle="dropdown" id="notice">
+                    <i class="fas fa-bell"></i>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end"></ul>
+                <a class="nav-link px-2" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="后续更新">
+                    <i class="fas fa-question-circle"></i>
+                </a>
+                <a class="nav-link px-2" href="{% url 'pan:profile' %}" data-mdb-toggle="tooltip"
+                   data-mdb-placement="bottom" title="账户">
+                    <img src="{{ user.profile.avatar.url }}" class="rounded-circle" height="25" width="25"
+                         alt="avatar"/>
+                </a>
+            </div>
+        </div>
+    </nav>
+    {# 导航栏 #}
+</header>
+<main class="main-container">
+    <div class="container-lg px-lg-4">
+        {% block search %}
+        <div class="input-group d-flex d-sm-none">
+            <input type="search" class="form-control rounded search" placeholder="搜索" autocomplete="off"/>
+            <span class="input-group-text border-0">
+                <i class="fas fa-search"></i>
+            </span>
+        </div>
+        {% endblock %}
+        {% block content %}{% endblock %}
+    </div>
+</main>
+{# 确认框 #}
+<div class="modal fade" id="modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <h5 class="mb-4 modal-title"></h5>
+                <div class="modal-btn">
+                    <button class="btn btn-light" data-mdb-dismiss="modal">取消</button>
+                    <button class="btn btn-danger">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{# 确认框 #}
+{# alert #}
+<div class="alert alert-info translate-middle px-2 py-1 fade hide" id="alert"
+     style="z-index: 1; position: absolute; left: 50%; top: -20%">
+    <i class="fas fa-check-circle"></i><span class="ps-2 alert-content">复制成功</span>
+</div>
+{# alert #}
+{# 验证通知 #}
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
+    <div id="toast" class="toast fade hide">
+        <div class="toast-header">
+            <i></i>
+            <button type="button" class="ms-auto btn-close" data-mdb-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+{# 验证通知 #}
+{% block componets %}{% endblock %} {# 组件 #}
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.js"></script>
+<script src="{% static 'pan/js/utils.js' %}"></script>
+<script src="{% static 'pan/js/config.js' %}"></script>
+<script src="{% static 'pan/js/responsive.js' %}"></script>
+{% block scripts %}{% endblock %}{# js文件 #}
+</body>
+</html>

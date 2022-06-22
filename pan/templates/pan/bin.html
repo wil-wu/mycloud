@@ -1,0 +1,56 @@
+{% extends 'pan/base.html' %}
+{% load static %}
+
+{% block styles %}
+    <link href="https://cdn.staticfile.org/bootstrap-table/1.19.1/bootstrap-table.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block title %}回收站{% endblock %}
+
+{% block sidenavs %}
+    <a class="nav-link fs-6" id="cloudTab" href="{% url 'pan:cloud' %}">
+        <i class="fas fa-cloud me-2"></i>我的云盘
+    </a>
+    <a class="nav-link fs-6" id="historyTab" href="{% url 'pan:history' %}">
+        <i class="fas fa-history me-2"></i>传输历史
+    </a>
+    <a class="nav-link fs-6 active" id="binTab" href="{% url 'pan:bin' %}">
+        <i class="fas fa-trash me-2"></i>回收站
+    </a>
+{% endblock %}
+
+{% block content %}
+    <div id="toolbar">
+        <div class="float-end btn-group shadow-0" role="group">
+            <button type="button" id="recycleBtn" class="btn btn-light" data-mdb-toggle="tooltip"
+                            data-mdb-placement="bottom" title="恢复"><i class="fas fa-undo-alt"></i></button>
+            <button type="button" id="delBtn" class="btn btn-light" data-mdb-toggle="tooltip"
+                            data-mdb-placement="bottom" title="删除"><i class="fas fa-trash"></i></button>
+            <button type="button" id="sortBy" class="btn btn-light dropdown-toggle hidden-arrow "
+                    data-mdb-toggle="dropdown" data-mdb-placement="bottom" data-custom-sort="create_time">上传时间
+            </button>
+            <button type="button" id="sortOrder" class="btn btn-light px-2"
+                    data-mdb-placement="bottom"
+                    data-custom-order="desc"><i class="fas fa-sort-down"></i>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item sort" data-custom-sort="file_name"
+                       href="javascript:void (0)">文件名</a></li>
+                <li><a class="dropdown-item sort" data-custom-sort="file_size"
+                       href="javascript:void (0)">文件大小</a></li>
+                <li><a class="dropdown-item sort" data-custom-sort="create_time"
+                       href="javascript:void (0)">上传时间</a></li>
+            </ul>
+        </div>
+        <div class="pb-3 card" style="clear: both"></div>
+    </div>
+    <table id="binTable"></table>
+{% endblock %}
+
+{% block scripts %}
+    <script src="https://cdn.staticfile.org/bootstrap-table/1.19.1/bootstrap-table.min.js"></script>
+    <script src="https://cdn.staticfile.org/bootstrap-table/1.19.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="//at.alicdn.com/t/font_2926309_gvlwiirwihf.js"></script>
+    <script src="{% static 'pan/js/common-table.js' %}"></script>
+    <script src="{% static 'pan/js/bin-table.js' %}"></script>
+{% endblock %}

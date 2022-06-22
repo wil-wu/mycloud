@@ -1,0 +1,103 @@
+.icon {
+    width: 2em;
+    height: 2em;
+    vertical-align: -0.15em;
+    fill: currentColor;
+    overflow: hidden;
+}
+
+.icon-link {
+    color: #757575;
+    transition: color 0.15s ease-in-out;
+}
+
+.icon-link:hover {
+    color: rgba(0, 0, 0, 0.7);
+}
+
+.breadcrumb-item {
+    cursor: pointer;
+    color: #1266F1;
+    transition: color 0.15s ease-in-out;
+}
+
+.breadcrumb-item:hover {
+    color: #0c56d0;
+}
+
+.breadcrumb-active {
+    cursor: text;
+    color: inherit;
+}
+
+.breadcrumb-active:hover {
+    color: inherit;
+}
+
+.custom-check {
+    border-color: #BDBDBD;
+}
+
+.copy-text {
+    font-size: 0.5rem;
+}
+
+.selected {
+    background-color: #E0E0E0;
+}
+
+.list-group-item-choice {
+    cursor: pointer;
+    user-select: none;
+}
+
+/* 容器 */
+.main-container {
+    margin-top: 85px;
+    transition: padding-left 0.2s;
+}
+
+.sidenav {
+    transition: padding-left 0.2s;
+}
+
+/* element空状态 */
+.el-empty {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-top: 4rem;
+    padding: 40px 0
+}
+
+.el-empty__image {
+    width: 160px;
+}
+
+.el-empty__description {
+    margin-top: 20px;
+    color: #909399;
+}
+
+/* 响应式 */
+@media (min-width: 768px) {
+    .el-empty__image {
+        width: 200px;
+    }
+}
+
+@media (min-width: 992px) {
+    .main-container {
+        padding-left: 240px;
+    }
+
+    .sidenav {
+        padding-left: 240px;
+    }
+
+    .offcanvas {
+        transition: none;
+    }
+}

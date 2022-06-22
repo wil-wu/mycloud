@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="zh" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.css" rel="stylesheet">
+    <title>异常</title>
+</head>
+<body class="h-100">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <header class="text-center">
+            <div class="mb-3">
+                <h1 class="display-1">{% block code %}{% endblock %}</h1>
+            </div>
+            <div class="small mb-3">{% block text %}{% endblock %}</div>
+            <a class="btn btn-dark btn-lg mb-1" href="{% url 'pan:index' %}">返回主页</a>
+        </header>
+    </div>
+</body>
+</html>

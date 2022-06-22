@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.staticfile.org/video.js/7.17.2/video-js.min.css" rel="stylesheet">
+    <title>详情</title>
+</head>
+<body class="h-100">
+<nav class="navbar navbar-light bg-white shadow-0 border-bottom">
+    <div class="container-fluid">
+        <a class="navbar-toggler" href="{% url 'pan:cloud' %}" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="返回">
+            <i class="fas fa-chevron-left"></i>
+        </a>
+        <div class="navbar-nav flex-row ms-auto align-items-center">
+            <a class="nav-link px-2 dropdown-toggle hidden-arrow" data-mdb-toggle="dropdown" id="notice">
+                <i class="fas fa-bell"></i>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end"></ul>
+            <a class="nav-link px-2" data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="后续更新">
+                <i class="fas fa-question-circle"></i>
+            </a>
+            <a class="nav-link px-2" href="{% url 'pan:profile' %}" data-mdb-toggle="tooltip"
+               data-mdb-placement="bottom" title="账户">
+                <img src="{{ user.profile.avatar.url }}" class="rounded-circle" height="25" width="25" alt="avatar"/>
+            </a>
+        </div>
+    </div>
+</nav>
+<div class="container-fluid" style="height: calc(100% - 61px)">
+    <div class="row h-100">
+        <div class="col-md-9 h-100 bg-light">
+            <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none" id="notSupport">
+                <div class="text-center">
+                    <p>暂不支持此类文件预览</p>
+                    <button class="btn btn-info">立即下载</button>
+                </div>
+            </div>
+            <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none" id="notPermission">
+                <div class="text-center">
+                    <p>由于文件大小不支持在线预览</p>
+                    <button class="btn btn-info">立即下载</button>
+                </div>
+            </div>
+            <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none" id="audioPlayer">
+                <div class="card" style="width: 20rem">
+                    <img class="card-img-top" src="{% static 'pan/image/music.jpg' %}" alt="..">
+                    <div class="card-body">
+                        <div class="progress rounded mb-3">
+                            <div class="progress-bar bg-info rounded" id="progress"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-end text-muted" id="timer" style="font-size: 0.875rem">
+                            <span>0:00</span>
+                            <span>0:00</span>
+                        </div>
+                        <div class="d-flex align-items-center mt-3">
+                            <i id="play" class="fas fa-play"></i>
+                            <div class="ps-5 flex-grow-1 d-flex align-items-center">
+                                <i id="icon" class="fas fa-volume-down"></i>
+                                <div class="ms-2 range w-100">
+                                    <input id="volume" type="range" class="form-range" value="30"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none">
+                <img class="mw-100 mh-100" id="image" src="" alt="..."/>
+            </div>
+            <video class="h-100 w-auto video-js" id="videoPlayer" style="display: none"></video>
+        </div>
+        <div class="col-md-3 h-100 border-start p-3">
+            <div id="info">
+                <h6 class="mb-3 fw-bold">文件信息</h6>
+                <div class="text-muted small">
+                    <p>文件名：</p>
+                    <p>文件类型：</p>
+                    <p>文件大小：</p>
+                    <p>上传时间：</p>
+                </div>
+                <h6 class="mb-3 fw-bold">提示</h6>
+                <div class="small">
+                    <i class="fas fa-info me-1"></i>
+                    <span id="tip"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast fade hide" role="alert">
+        <div class="toast-header">
+            <i></i>
+            <button type="button" class="ms-auto btn-close" data-mdb-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.js"></script>
+<script src="https://cdn.staticfile.org/howler/2.2.3/howler.min.js"></script>
+<script src="https://cdn.staticfile.org/video.js/7.17.2/video.min.js"></script>
+<script src="https://cdn.staticfile.org/video.js/7.17.2/lang/zh-CN.min.js"></script>
+<script src="{% static 'pan/js/utils.js' %}"></script>
+<script src="{% static 'pan/js/config.js' %}"></script>
+<script src="{% static 'pan/js/detail.js' %}"></script>
+</body>
+</html>

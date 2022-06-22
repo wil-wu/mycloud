@@ -1,0 +1,124 @@
+{% extends 'pan/base.html' %}
+{% load static %}
+
+{% block styles %}
+    <link href="https://cdn.staticfile.org/bootstrap-table/1.19.1/bootstrap-table.min.css" rel="stylesheet">
+{% endblock %}
+
+{% block title %}传输历史{% endblock %}
+
+{% block sidenavs %}
+    <a class="nav-link fs-6" id="cloudTab" href="{% url 'pan:cloud' %}">
+        <i class="fas fa-cloud me-2"></i>我的云盘
+    </a>
+    <a class="nav-link fs-6 active" id="historyTab" href="{% url 'pan:history' %}">
+        <i class="fas fa-history me-2"></i>传输历史
+    </a>
+    <a class="nav-link fs-6" id="binTab" href="{% url 'pan:bin' %}">
+        <i class="fas fa-trash me-2"></i>回收站
+    </a>
+{% endblock %}
+
+{% block content %}
+    <div id="toolbar">
+        <div class="float-end btn-group shadow-0" role="group">
+            <button type="button" id="delBtn" class="btn btn-light" data-mdb-toggle="tooltip"
+                    data-mdb-placement="bottom" title="删除"><i class="fas fa-trash"></i></button>
+            <button type="button" id="sortBy" class="btn btn-light dropdown-toggle hidden-arrow "
+                    data-mdb-toggle="dropdown" data-mdb-placement="bottom" data-custom-sort="create_time">创建时间
+            </button>
+            <button type="button" id="sortOrder" class="btn btn-light px-2"
+                    data-mdb-placement="bottom"
+                    data-custom-order="desc"><i class="fas fa-sort-down"></i>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item sort" data-custom-sort="expire_time"
+                       href="javascript:void (0)">过期时间</a></li>
+                <li><a class="dropdown-item sort" data-custom-sort="create_time"
+                       href="javascript:void (0)">创建时间</a></li>
+            </ul>
+        </div>
+        <div class="pb-3 card" style="clear: both"></div>
+    </div>
+    <table id="historyTable"></table>
+{% endblock %}
+
+{% block componets %}{# 链接设置 #}
+    <div class="modal fade" id="shareModal" data-custom-id="">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-bottom-0">
+                    <h5 class="modal-title">链接设置</h5>
+                    <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <div class="mb-3">
+                                <p>链接分享</p>
+                                <div class="bg-image hover-overlay ripple copy-text text-center w-100">
+                                    <div class="border rounded text-truncate py-2 px-1" id="shareLink"></div>
+                                    <a href="javascript:void(0)" class="text-dark copy-mask">
+                                        <div class="mask rounded p-2" style="background-color: #EEEEEE">复制</div>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <p>口令分享</p>
+                                <div class="bg-image hover-overlay ripple copy-text text-center">
+                                    <div class="w-100 border rounded py-2 px-1" id="shareKey"></div>
+                                    <a href="javascript:void(0)" class="text-dark copy-mask">
+                                        <div class="mask rounded p-2" style="background-color: #EEEEEE">复制</div>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="mb-3 text-center">
+                                <button class="btn btn-info">一键复制</button>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <p>设置</p>
+                            <div class="d-flex align-items-center mb-3">
+                                <div>有效期</div>
+                                <div class="dropdown ms-auto">
+                                    <sapn class="me-1" id="delta" data-custom-delta="">请选择</sapn>
+                                    <a class="icon-link hidden-arrow" href="javascript:void (0)"
+                                       data-mdb-toggle="dropdown">
+                                        <i class="fas fa-angle-down"></i>
+                                    </a>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                        <li><a class="dropdown-item" data-custom-delta="1"
+                                               href="javascript:void (0)">1天</a></li>
+                                        <li><a class="dropdown-item" data-custom-delta="7"
+                                               href="javascript:void (0)">7天</a></li>
+                                        <li><a class="dropdown-item" data-custom-delta="30" href="javascript:void (0)">30天</a>
+                                        </li>
+                                        <li><a class="dropdown-item" data-custom-delta="999" href="javascript:void (0)">永久有效</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <p>补充描述</p>
+                                <div class="form-outline">
+                                    <textarea class="form-control border" id="summary" rows="3"
+                                              maxlength="100"></textarea>
+                                    <label class="form-label copy-text">此信息将展示给分享的用户</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}{# 链接设置 #}
+
+{% block scripts %}
+    <script src="https://cdn.staticfile.org/bootstrap-table/1.19.1/bootstrap-table.min.js"></script>
+    <script src="https://cdn.staticfile.org/bootstrap-table/1.19.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/clipboard.js/2.0.8/clipboard.min.js"></script>
+    <script src="//at.alicdn.com/t/font_2926309_gvlwiirwihf.js"></script>
+    <script src="{% static 'pan/js/common-table.js' %}"></script>
+    <script src="{% static 'pan/js/history-table.js' %}"></script>
+{% endblock %}
