@@ -54,10 +54,6 @@
         this.elem = $elem
         this.mdbModal = new mdb.Modal($elem.get(0))
         this.btn = $elem.find('.modal-btn').children().last()
-        // 关闭时卸载所有监听
-        $elem.on('hidden.mdb.modal', function () {
-            $elem.off('show.mdb.modal hide.mdb.modal')
-        })
 
         this.setTitle = function (title) {
             this.elem.find('.modal-title').text(title)
@@ -77,10 +73,6 @@
     function BaseModal($elem) {
         this.elem = $elem
         this.mdbModal = new mdb.Modal($elem.get(0))
-
-        $elem.on('hidden.mdb.modal', function () {
-            $elem.off('show.mdb.modal hide.mdb.modal')
-        })
     }
 
     // 获取cookie

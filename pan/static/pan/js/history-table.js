@@ -71,9 +71,9 @@ $(document).ready(function () {
                 modal.getModal().hide()
             }
 
-            modal.elem.on('show.mdb.modal', function () {
+            modal.elem.one('show.mdb.modal', function () {
                 modal.btn.on('click', del)
-            }).on('hide.mdb.modal', function () {
+            }).one('hide.mdb.modal', function () {
                 modal.btn.off('click', del)
             })
             modal.getModal().show()
@@ -150,9 +150,9 @@ $(document).ready(function () {
             modal.getModal().hide()
         }
 
-        modal.elem.on('show.mdb.modal', function () {
+        modal.elem.one('show.mdb.modal', function () {
             modal.btn.on('click', del)
-        }).on('hide.mdb.modal', function () {
+        }).one('hide.mdb.modal', function () {
             modal.btn.off('click', del)
         })
         modal.getModal().show()
@@ -174,7 +174,7 @@ $(document).ready(function () {
         $elem.find('#shareLink').text(ctx + '/share/' + data.signature)
         $elem.find('#shareKey').text(data.secret_key)
 
-        $elem.on('show.mdb.modal', function () {
+        $elem.one('show.mdb.modal', function () {
             $mask.on('click', function () {
                 custom.copyText(this.previousElementSibling.textContent, alert)
             })
@@ -190,7 +190,7 @@ $(document).ready(function () {
             $summary.on('change', function () {
                 summaryChange = true
             })
-        }).on('hide.mdb.modal', function () {
+        }).one('hide.mdb.modal', function () {
             $mask.off('click')
             $copyBtn.off('click')
             $deltas.off('click')

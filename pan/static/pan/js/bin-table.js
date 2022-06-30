@@ -72,9 +72,9 @@ $(document).ready(function () {
                 modal.getModal().hide()
             }
 
-            modal.elem.on('show.mdb.modal', function () {
+            modal.elem.one('show.mdb.modal', function () {
                 modal.btn.on('click', del)
-            }).on('hide.mdb.modal', function () {
+            }).one('hide.mdb.modal', function () {
                 modal.btn.off('click', del)
             })
             modal.getModal().show()
@@ -99,9 +99,9 @@ $(document).ready(function () {
                 modal.getModal().hide()
             }
 
-            modal.elem.on('show.mdb.modal', function () {
+            modal.elem.one('show.mdb.modal', function () {
                 modal.btn.on('click', recycle)
-            }).on('hide.mdb.modal', function () {
+            }).one('hide.mdb.modal', function () {
                 modal.btn.off('click', recycle)
             })
             modal.getModal().show()
@@ -167,9 +167,9 @@ $(document).ready(function () {
             modal.getModal().hide()
         }
 
-        modal.elem.on('show.mdb.modal', function () {
+        modal.elem.one('show.mdb.modal', function () {
             modal.btn.on('click', del)
-        }).on('hide.mdb.modal', function () {
+        }).one('hide.mdb.modal', function () {
             modal.btn.off('click', del)
         })
         modal.getModal().show()

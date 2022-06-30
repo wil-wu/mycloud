@@ -138,9 +138,9 @@ $(document).ready(function () {
                 modal.getModal().hide()
             }
 
-            modal.elem.on('show.mdb.modal', function () {
+            modal.elem.one('show.mdb.modal', function () {
                 modal.btn.on('click', trash)
-            }).on('hide.mdb.modal', function () {
+            }).one('hide.mdb.modal', function () {
                 modal.btn.off('click', trash)
             })
 
@@ -581,9 +581,9 @@ $(document).ready(function () {
                         $uploadToast.removeClass('show').addClass('hide')
                     }
 
-                    modal.elem.on('show.mdb.modal', function () {
+                    modal.elem.one('show.mdb.modal', function () {
                         modal.btn.on('click', cancelUpload)
-                    }).on('hide.mdb.modal', function () {
+                    }).one('hide.mdb.modal', function () {
                         modal.btn.off('click', cancelUpload)
                     })
 
