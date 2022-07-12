@@ -8,7 +8,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.signing import BadSignature
+from django.core.signing import BadSignature, Signer
 from django.http import FileResponse
 from django.shortcuts import render
 from django.utils import timezone
@@ -20,7 +20,7 @@ from pan.forms import UserBaseForm, InfoForm, AvatarForm, PasswordForm
 from pan.models import (GenericFile, UserFile, UserDir, FileShare, ShareRecord,
                         FileType, UserApproval, UserMessage, Notice)
 from pan.serializers import FileSerializer, FileShareSerializer, FolderSerializer, NoticeSerializer
-from pan.utils import AjaxObj, get_key_signature, get_dir_size, Signer
+from pan.utils import AjaxObj, get_key_signature, get_dir_size
 
 
 class IndexView(TemplateView):
@@ -290,7 +290,6 @@ class FolderUploadView(LoginRequiredMixin, View):
                     prev = UserDir.objects.get(file_path=part_path)
                     temp_folder = prev
                     temp_path = Path(part_path)
-                    continue
                 else:
                     prev = UserDir(file_name=part, file_path=part_path, folder=temp_folder, create_by=request.user)
                     dirs.append(prev)
