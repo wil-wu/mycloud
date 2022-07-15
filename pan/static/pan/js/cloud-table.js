@@ -485,11 +485,16 @@ $(document).ready(function () {
     }
 
     function fileUpload() {
-        let use = this.files[0].size + _used
+        let size = this.files[0].size
+        let use = size + _used
 
         if (use > _storage) {
             toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
             toast.setText('剩余空间不足')
+            toast.getToast().show()
+        } else if (size > MAX_UPLOAD_FILE_SIZE) {
+            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setText(`单次上传不能超过${custom.fileSizeFormat(MAX_UPLOAD_FILE_SIZE)}`)
             toast.getToast().show()
         } else {
             let formData = new FormData()
