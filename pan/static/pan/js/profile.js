@@ -39,7 +39,7 @@ $(document).ready(function () {
         let file = this.files[0]
         if (file.size > MAX_AVATAR_SIZE) {
             toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
-            toast.setText('上传图片不能大于1M')
+            toast.setText(`上传图片不能大于${custom.fileSizeFormat(MAX_AVATAR_SIZE)}`)
             toast.getToast().show()
         } else {
             let reader = new FileReader()

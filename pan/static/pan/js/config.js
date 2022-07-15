@@ -2,15 +2,19 @@ const ctx = 'http://127.0.0.1:8000'
 
 // const csrftoken = custom.getCookie('csrftoken')
 
-const media = {
+const _media = {
     video: ['.mp4'],
     audio: ['.mp3', '.wav'],
     image: ['.jpg', '.png', '.svg', '.gif']
 }
 
+const DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
+const MAX_UPLOAD_FILE_SIZE = 251658240
+
 const MAX_AVATAR_SIZE = 3145728
 
-const breakPoint = 992
+const BREAK_POINT = 992
 
 mdb.Toast.Default.delay = 2000
 

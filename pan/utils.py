@@ -36,6 +36,20 @@ def get_dir_size(path):
     return sum(f.stat().st_size for f in path.glob('**/*') if f.is_file())
 
 
+# 文件大小格式化
+def file_size_format(value):
+    fixed = 2
+    if value < 1024:
+        size = f'{value}B'
+    elif value < 1048576:
+        size = f'{round(value / 1024, fixed)}KB'
+    elif value < 1073741824:
+        size = f'{round(value / 1024 / 1024, fixed)}M'
+    else:
+        size = f'{round(value / 1024 / 1024 / 1024, fixed)}G'
+    return size
+
+
 class DictBase(dict):
 
     def __init__(self, **kwargs):

@@ -509,11 +509,25 @@ $(document).ready(function () {
     }
 
     function folderUpload() {
-        let use = Array.from(this.files).map(file => file.size).reduce((prev, curr) => prev + curr) + _used
+        let size = 0
+        let upload_nums = 0
+        Array.from(this.files).forEach( (value) => {
+            size += value.size
+            upload_nums += 2
+        })
+        let use = size + _used
 
         if (use > _storage) {
             toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
             toast.setText('剩余空间不足')
+            toast.getToast().show()
+        } else if (use > MAX_UPLOAD_FILE_SIZE) {
+            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setText(`单次上传不能超过${custom.fileSizeFormat(MAX_UPLOAD_FILE_SIZE)}`)
+            toast.getToast().show()
+        } else if (upload_nums > DATA_UPLOAD_MAX_NUMBER_FIELDS) {
+            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setText(`上传条目数超过${DATA_UPLOAD_MAX_NUMBER_FIELDS}限制`)
             toast.getToast().show()
         } else {
             let formData = new FormData()

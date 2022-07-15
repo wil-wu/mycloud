@@ -7,10 +7,10 @@ $(document).ready(function () {
     let notice = $('#notice')
     let contents = notice.next()
 
-    window.innerWidth >= breakPoint ? sidebar.show() : sidebar.hide()
+    window.innerWidth >= BREAK_POINT ? sidebar.show() : sidebar.hide()
 
     $(window).on('resize', function () {
-        window.innerWidth > breakPoint ? sidebar.show() : sidebar.hide()
+        window.innerWidth > BREAK_POINT ? sidebar.show() : sidebar.hide()
     })
 
     storage.find('#storage').text(custom.fileSizeFormat(_storage))

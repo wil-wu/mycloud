@@ -20,7 +20,7 @@ from pan.forms import UserBaseForm, InfoForm, AvatarForm, PasswordForm
 from pan.models import (GenericFile, UserFile, UserDir, FileShare, ShareRecord,
                         FileType, UserApproval, UserMessage, Notice)
 from pan.serializers import FileSerializer, FileShareSerializer, FolderSerializer, NoticeSerializer
-from pan.utils import AjaxObj, get_key_signature, get_dir_size
+from pan.utils import AjaxObj, get_key_signature, get_dir_size, file_size_format
 
 
 class IndexView(TemplateView):
@@ -137,7 +137,7 @@ class AlterAvatarView(LoginRequiredMixin, View):
         form = AvatarForm(request.POST, request.FILES)
         if form.is_valid():
             if form.cleaned_data['avatar'].size > settings.MAX_AVATAR_SIZE:
-                return AjaxObj(500, '上传图片不能大于3M').get_response()
+                return AjaxObj(500, f'上传图片不能大于{file_size_format(settings.MAX_AVATAR_SIZE)}').get_response()
             profile = request.user.profile
             profile.avatar = form.cleaned_data['avatar']
             profile.update_by = request.user
@@ -270,6 +270,10 @@ class FolderUploadView(LoginRequiredMixin, View):
         if files is None or paths is None:
             return AjaxObj().get_response()
 
+        path_nums = len(paths)
+        if path_nums * 2 > settings.DATA_UPLOAD_MAX_NUMBER_FIELDS:
+            return AjaxObj(500, f'上传条目数超过{settings.DATA_UPLOAD_MAX_NUMBER_FIELDS}限制').get_response()
+
         use = request.session['cloud']['used'] + sum(s.size for s in files)
         if use > request.session['cloud']['storage']:
             return AjaxObj(500, '剩余空间不足').get_response()
@@ -279,7 +283,7 @@ class FolderUploadView(LoginRequiredMixin, View):
         objs = []
         dirs = []
 
-        for i in range(len(paths)):
+        for i in range(path_nums):
             # 递归创建目录
             parts = Path(paths[i]).parts[:-1]
             temp_folder = folder

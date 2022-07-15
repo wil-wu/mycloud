@@ -11,8 +11,8 @@ $(document).ready(function () {
         file.url = ctx + '/media/' + file.file_path
     }).done(function () {
         setInfo()
-        for (let key in media) {
-            if (media[key].indexOf(file.file_type) !== -1) {
+        for (let key in _media) {
+            if (_media[key].indexOf(file.file_type) !== -1) {
                 if (file.file_size > _preview[key]) {
                     $('#notPermission').removeClass('d-none').find('.btn-info').click(function () {
                         location.href = ctx + '/download/' + file.file_uuid
