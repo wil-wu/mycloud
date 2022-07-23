@@ -347,7 +347,8 @@ $(document).ready(function () {
         if (folderUUID === undefined) {
             $(`<li class="list-group-item list-group-item-choice">
                    <i class="fas fa-chevron-down me-2"></i>根目录
-               </li>`).click(function () {
+               </li>`
+            ).click(function () {
                 $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
             }).appendTo(group)
         }
@@ -359,15 +360,16 @@ $(document).ready(function () {
                 ).click(function () {
                     $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
                 }).dblclick(function () {
+                    let dom = $(`<li class="list-group-item list-group-item-choice"><i class="fas fa-chevron-left me-2"></i>返回上一级</li>`)
+                        .click(function () {
+                            $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
+                        })
+                        .dblclick(function () {
+                            renderBack(container, group, stackFolder.at(-2), stackFolder, exclude)
+                        })
                     stackFolder.push(this.dataset.customUuid)
                     group.empty()
-                    group.append($(`<li class="list-group-item list-group-item-choice">
-                                        <i class="fas fa-chevron-left me-2"></i>返回上一级
-                                    </li>`).click(function () {
-                        $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
-                    }).dblclick(function () {
-                        renderBack(container, group, stackFolder.at(-2), stackFolder, exclude)
-                    }))
+                    group.append(dom)
                     renderFolder(container, group, this.dataset.customUuid, stackFolder, exclude)
                 }).appendTo(group)
             })
@@ -379,15 +381,15 @@ $(document).ready(function () {
     function renderBack(container, group, folderUUID, stackFolder, exclude) {
         stackFolder.pop()
         group.empty()
-        if (folderUUID === undefined) {
-        } else {
-            group.append($(`<li class="list-group-item list-group-item-choice">
-                                <i class="fas fa-chevron-left me-2"></i>返回上一级
-                            </li>`).click(function () {
-                $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
-            }).dblclick(function () {
-                renderBack(container, group, stackFolder.at(-2), stackFolder, exclude)
-            }))
+        if (folderUUID) {
+            let dom = $(`<li class="list-group-item list-group-item-choice"><i class="fas fa-chevron-left me-2"></i>返回上一级</li>`)
+                .click(function () {
+                    $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
+                })
+                .dblclick(function () {
+                    renderBack(container, group, stackFolder.at(-2), stackFolder, exclude)
+                })
+            group.append(dom)
         }
         renderFolder(container, group, folderUUID, stackFolder, exclude)
     }
@@ -476,9 +478,9 @@ $(document).ready(function () {
             moveModal.mdbModal.hide()
         }
 
-        elem.on('show.mdb.modal', function () {
+        elem.one('show.mdb.modal', function () {
             btn.on('click', moveFile)
-        }).on('hide.mdb.modal', function () {
+        }).one('hide.mdb.modal', function () {
             btn.off('click', moveFile)
         })
         moveModal.mdbModal.show()
@@ -516,7 +518,7 @@ $(document).ready(function () {
     function folderUpload() {
         let size = 0
         let upload_nums = 0
-        Array.from(this.files).forEach( (value) => {
+        Array.from(this.files).forEach((value) => {
             size += value.size
             upload_nums += 2
         })
@@ -590,7 +592,7 @@ $(document).ready(function () {
             },
             xhr: function () {
                 let xhr = new XMLHttpRequest()
-                cancelBtn.click(function() {
+                cancelBtn.click(function () {
                     modal.setTitle('你确定取消上传吗')
                     modal.setBtnType('btn btn-warning')
 
