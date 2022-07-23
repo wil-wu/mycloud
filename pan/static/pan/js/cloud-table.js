@@ -413,7 +413,7 @@ $(document).ready(function () {
             $elem.find('#shareKey').text(res.data.key)
         })
 
-        $elem.on('show.mdb.modal', function () {
+        $elem.one('show.mdb.modal', function () {
             $mask.on('click', function () {
                 custom.copyText(this.previousElementSibling.textContent, alert)
             })
@@ -428,7 +428,7 @@ $(document).ready(function () {
             $summary.on('change', function () {
                 isChange = true
             })
-        }).on('hide.mdb.modal', function () {
+        }).one('hide.mdb.modal', function () {
             $mask.off('click')
             $copyBtn.off('click')
             $deltas.off('click')
