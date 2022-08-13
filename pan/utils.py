@@ -37,8 +37,7 @@ def get_dir_size(path):
 
 
 # 文件大小格式化
-def file_size_format(value):
-    fixed = 2
+def file_size_format(value, fixed=2):
     if value < 1024:
         size = f'{value}B'
     elif value < 1048576:
