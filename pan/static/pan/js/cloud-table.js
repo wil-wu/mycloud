@@ -57,7 +57,7 @@ $(document).ready(function () {
     // 排序
     $('.sort').click(function () {
         let sortBy = this.dataset.customSort
-        let folderUUID = stackNav.at(-1).data('customUuid')
+        let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
         $('#sortBy').text(this.textContent).data('customSort', sortBy)
         cloudTable.bootstrapTable('refresh', {
             query: {
@@ -71,7 +71,7 @@ $(document).ready(function () {
     // 升降序
     $('#sortOrder').click(function () {
         let elem = $(this)
-        let folderUUID = stackNav.at(-1).data('customUuid')
+        let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
         elem.data('customOrder') === 'desc' ? elem.data('customOrder', 'asc') : elem.data('customOrder', 'desc')
         elem.children().first().toggleClass('fa-sort-down fa-sort-up')
         cloudTable.bootstrapTable('refresh', {
@@ -123,7 +123,7 @@ $(document).ready(function () {
             modal.setBtnType('btn btn-danger')
 
             function trash() {
-                let folderUUID = stackNav.at(-1).data('customUuid')
+                let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
                 let uuids = toggleView === 'customView' ? $.map(checks, function (item) {
                     return item.dataset.customUuid
                 }) : checks.map(function (item) {
@@ -334,7 +334,7 @@ $(document).ready(function () {
 
     // 面包屑
     function addCrumb(text, uuid) {
-        stackNav.at(-1).removeClass('breadcrumb-active').click(function () {
+        stackNav[stackNav.length - 1].removeClass('breadcrumb-active').click(function () {
             renderCrumb($(this))
         })
         let crumb = $(`<li class="breadcrumb-item breadcrumb-active" data-custom-uuid="${uuid}">${text}</li>`)
@@ -365,7 +365,7 @@ $(document).ready(function () {
                             $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
                         })
                         .dblclick(function () {
-                            renderBack(container, group, stackFolder.at(-2), stackFolder, exclude)
+                            renderBack(container, group, stackFolder[stackFolder.length - 2], stackFolder, exclude)
                         })
                     stackFolder.push(this.dataset.customUuid)
                     group.empty()
@@ -387,7 +387,7 @@ $(document).ready(function () {
                     $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
                 })
                 .dblclick(function () {
-                    renderBack(container, group, stackFolder.at(-2), stackFolder, exclude)
+                    renderBack(container, group, stackFolder[stackFolder.length - 2], stackFolder, exclude)
                 })
             group.append(dom)
         }
@@ -445,7 +445,7 @@ $(document).ready(function () {
     }
 
     function fileTrash(uuid) {
-        let folderUUID = stackNav.at(-1).data('customUuid')
+        let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
         table.alterCallback(ctx + '/trash', {
             method: 'trash',
             uuids: [uuid]
@@ -466,13 +466,13 @@ $(document).ready(function () {
         let group = $('<div class="list-group list-group-flush"></div>')
         let stackFolder = [undefined]
 
-        renderFolder(container, group, stackFolder.at(-1), stackFolder, uuid)
+        renderFolder(container, group, stackFolder[stackFolder.length - 1], stackFolder, uuid)
 
         function moveFile() {
-            let folderUUID = stackNav.at(-1).data('customUuid')
+            let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
             let dst = elem.find('.selected').data('customUuid')
             table.alterCallback(ctx + '/move', {
-                src: uuid, dst: dst === undefined || '' ? stackFolder.at(-1) : dst
+                src: uuid, dst: dst === undefined || '' ? stackFolder[stackFolder.length - 1] : dst
             }, toast, cloudTable, folderUUID === '' ? undefined : folderUUID)
 
             moveModal.mdbModal.hide()
@@ -501,7 +501,7 @@ $(document).ready(function () {
         } else {
             let formData = new FormData()
             let uploadName = this.files[0].name
-            let folderUUID = stackNav.at(-1).data('customUuid')
+            let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
 
             if (folderUUID === '') {
                 folderUUID = undefined
@@ -539,7 +539,7 @@ $(document).ready(function () {
         } else {
             let formData = new FormData()
             let uploadName = this.files[0].webkitRelativePath.split('/')[0]
-            let folderUUID = stackNav.at(-1).data('customUuid')
+            let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
 
             if (folderUUID === '') {
                 folderUUID = undefined
