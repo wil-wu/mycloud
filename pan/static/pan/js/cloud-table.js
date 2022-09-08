@@ -54,6 +54,14 @@ $(document).ready(function () {
 
     table.tableSearch(cloudTable)
 
+    // 重置面包屑导航
+    cloudTable.on('refresh-options.bs.table', function () {
+        let dom = `<ol class="breadcrumb mb-0">
+                   <li class="breadcrumb-item breadcrumb-active" data-custom-uuid>我的云盘</li>
+                   </ol>`
+        $('.breadcrumb').replaceWith(dom)
+    })
+
     // 排序
     $('.sort').click(function () {
         let sortBy = this.dataset.customSort
