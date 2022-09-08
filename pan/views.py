@@ -526,10 +526,12 @@ class CloudViewSet(ModelViewSet):
         sort = self.request.query_params.get('sort')
         order = self.request.query_params.get('order')
         search = self.request.query_params.get('search')
-        queryset = self.request.user.files.select_related('folder').filter(folder__file_uuid=folder_uuid, del_flag='0')
 
         if search:
             queryset = self.request.user.files.filter(file_name__icontains=search, file_cate='0', del_flag='0')
+        else:
+            queryset = self.request.user.files.select_related('folder').filter(folder__file_uuid=folder_uuid,
+                                                                               del_flag='0')
         if sort:
             if order == 'desc':
                 queryset = queryset.order_by('-' + sort)
@@ -547,12 +549,10 @@ class HistoryViewSet(ModelViewSet):
         sort = self.request.query_params.get('sort')
         order = self.request.query_params.get('order')
         search = self.request.query_params.get('search')
-        queryset = FileShare.objects.select_related('user_file__create_by').filter(
-            user_file__create_by=self.request.user)
+        queryset = FileShare.objects.select_related('user_file').filter(user_file__create_by=self.request.user)
 
         if search:
-            queryset = FileShare.objects.select_related('user_file', 'user_file__create_by').filter(
-                user_file__file_name__icontains=search, user_file__create_by=self.request.user)
+            queryset = queryset.filter(user_file__file_name__icontains=search)
         if sort:
             if order == 'desc':
                 queryset = queryset.order_by('-' + sort)
@@ -573,7 +573,7 @@ class BinViewSet(ModelViewSet):
         queryset = self.request.user.files.filter(del_flag='1')
 
         if search:
-            queryset = queryset.filter(file_name__icontains=search, del_flag='1')
+            queryset = queryset.filter(file_name__icontains=search)
         if sort:
             if order == 'desc':
                 queryset = queryset.order_by('-' + sort)
