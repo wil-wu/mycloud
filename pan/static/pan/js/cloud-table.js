@@ -594,9 +594,13 @@ $(document).ready(function () {
             processData: false,
             beforeSend: function () {
                 $btn.prop('disabled', true)
+                $(window).on('beforeunload', function () {
+                    return ''
+                })
             },
             complete: function () {
                 $btn.prop('disabled', false)
+                $(window).off('beforeunload')
             },
             xhr: function () {
                 let xhr = new XMLHttpRequest()
