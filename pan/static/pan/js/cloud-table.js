@@ -56,9 +56,7 @@ $(document).ready(function () {
 
     // 重置面包屑导航
     cloudTable.on('refresh-options.bs.table', function () {
-        let dom = `<ol class="breadcrumb mb-0">
-                   <li class="breadcrumb-item breadcrumb-active" data-custom-uuid>我的云盘</li>
-                   </ol>`
+        let dom = $('<ol class="breadcrumb mb-0"></ol>').append(stackNav[0].addClass('breadcrumb-active'))
         $('.breadcrumb').replaceWith(dom)
     })
 
