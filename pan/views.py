@@ -397,7 +397,7 @@ class ShareDelete(LoginRequiredMixin, View):
         ids = json_loads(request.body).get('ids')
         for i in ids:
             try:
-                FileShare.objects.select_related('user_file__create_by').filter(
+                FileShare.objects.select_related('user_file').filter(
                     user_file__create_by=request.user).get(id=i).delete()
             except ObjectDoesNotExist:
                 return AjaxObj(500, "所选记录中有记录不存在或已删除").get_response()
