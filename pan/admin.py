@@ -207,7 +207,7 @@ class UserFileAdmin(admin.ModelAdmin):
     readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
     actions = [make_removed, make_recycle]
     list_select_related = ('create_by', )
-    list_display = ('file_uuid', 'file_name', 'file_type', 'file_size', 'del_flag', 'create_by')
+    list_display = ('file_name', 'file_type', 'file_size', 'del_flag', 'create_by')
     list_filter = ('file_type', 'del_flag')
     list_per_page = 10
 
@@ -238,7 +238,7 @@ class UserDirAdmin(admin.ModelAdmin):
     readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
     actions = [make_removed, make_recycle]
     list_select_related = ('create_by',)
-    list_display = ('file_uuid', 'file_name', 'file_size', 'del_flag', 'create_by')
+    list_display = ('file_name', 'file_size', 'del_flag', 'create_by')
     list_filter = ('del_flag', )
     list_per_page = 10
 
@@ -268,7 +268,7 @@ class FileShareAdmin(admin.ModelAdmin):
     search_fields = ('user_file__create_by__username', 'user_file__file_name')
     readonly_fields = ('secret_key', 'signature', 'create_time', 'update_by', 'update_time')
     list_select_related = ('user_file',)
-    list_display = ('signature', 'user_file', 'expire_time')
+    list_display = ('user_file', 'create_time', 'expire_time')
     list_filter = ('user_file__file_type', 'user_file__file_cate')
     list_per_page = 10
 
@@ -396,6 +396,7 @@ class UserApprovalAdmin(admin.ModelAdmin):
 
 @admin.register(UserLog)
 class UserLogAdmin(admin.ModelAdmin):
+    search_fields = ('username',)
     list_display = ('username', 'ipaddress', 'browser', 'os', 'action', 'action_time')
     list_filter = ('action',)
     list_per_page = 15
