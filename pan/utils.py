@@ -49,48 +49,32 @@ def file_size_format(value, fixed=2):
     return size
 
 
-class DictBase(dict):
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def __getattr__(self, key):
-        try:
-            return self[key]
-        except KeyError:
-            raise AttributeError(r"'Model' object has no attribute '%s'" % key)
-
-    def __setattr__(self, key, value):
-        self[key] = value
-
-
-class AjaxObj(DictBase):
-
+class AjaxObj(dict):
+    """
+    自定义ajax object
+    """
     def __init__(self, code=200, msg='', data=None):
         if data is None:
             data = {}
-        super().__init__(code=code, msg=msg, data=data)
-
-    @property
-    def data(self):
-        return self.data
+        super(AjaxObj, self).__init__()
+        self.update(code=code, msg=msg, data=data)
 
     def set_data(self, **kwargs):
-        self.get('data').update(kwargs)
+        self['data'].update(**kwargs)
 
     def set_result(self, result):
         if not isinstance(result, list):
-            raise TypeError('rows should should be list type')
-        self.get('data')['results'] = result
+            raise TypeError('result parameter should be list type')
+        self['data']['result'] = result
 
     def set_errors(self, errors):
         if not isinstance(errors, dict):
-            raise TypeError('parameter should be dict type')
-        self.get('data')['errors'] = errors
+            raise TypeError('errors parameter should be dict type')
+        self['data']['errors'] = errors
 
     def get_response(self):
         return JsonResponse({
-            'code': self.get('code', 200),
-            'msg': self.get('msg', ''),
-            'data': self.get('data', {})
+            'code': self['code'],
+            'msg': self['msg'],
+            'data': self['data']
         })
