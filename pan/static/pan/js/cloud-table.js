@@ -181,7 +181,7 @@ $(document).ready(function () {
      */
     function customView(data) {
         if (data.length === 0) {
-            return $('#emptyTemplate').html()
+            return custom.elEmpty(`<p>使用工具栏上传文件</p>`)
         }
         let template = $('#cloudTemplate').html()
         let view = ''
