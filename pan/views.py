@@ -202,7 +202,7 @@ class FileDownloadView(View):
     def get(self, request, *args, **kwargs):
         uuid = self.kwargs.get('guid')
         root = settings.MEDIA_ROOT
-        file = request.user.files.get(file_uuid=uuid)
+        file = GenericFile.objects.get(file_uuid=uuid)
         if file.file_cate == '0':
             return FileResponse(open(root / file.file_path, 'rb'), as_attachment=True)
         else:
