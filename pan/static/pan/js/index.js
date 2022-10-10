@@ -9,14 +9,14 @@ $(document).ready(function () {
 
     if (next) {
         $('html').animate({
-            scrollTop: loginBlock.offset().top-48
+            scrollTop: loginBlock.offset().top - 48
         })
     }
 
     // 滑动
     $('#loginLink').click(function () {
         $('html').animate({
-            scrollTop: loginBlock.offset().top-48
+            scrollTop: loginBlock.offset().top - 48
         })
     })
 
@@ -99,7 +99,7 @@ $(document).ready(function () {
                 $.post(ctx + '/register', formData, function (res) {
                     if (res.code === 200) {
                         $('html').animate({
-                            scrollTop: loginBlock.offset().top-48,
+                            scrollTop: loginBlock.offset().top - 48,
                         }, {
                             start: function () {
                                 toast.setText(res.msg)
@@ -230,7 +230,7 @@ $(document).ready(function () {
                     })
                     inputToggle.toggle('normal')
                 } else {
-                    toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+                    toast.setIcon('fas fa-exclamation-circle text-warning')
                     toast.setText(res.msg)
                     toast.getToast().show()
                 }

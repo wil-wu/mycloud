@@ -30,7 +30,7 @@ $(document).ready(function () {
                                     <div>— ${item.create_by}</div>
                                     <div class="ms-auto">${item.create_time}</div>
                                  </div>
-                                 <div>${item.content}</div>
+                                 <div class="text-wrap">${item.content}</div>
                              </div>
                          </li>`
             })

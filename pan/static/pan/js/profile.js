@@ -77,7 +77,7 @@ $(document).ready(function () {
 
             $.ajax({
                 url: ctx + '/alter-avatar',
-                method: "POST",
+                method: 'POST',
                 data: formData,
                 processData: false,
                 contentType: false,

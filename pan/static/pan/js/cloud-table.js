@@ -592,9 +592,7 @@ $(document).ready(function () {
             processData: false,
             beforeSend: function () {
                 $btn.prop('disabled', true)
-                $(window).on('beforeunload', function () {
-                    return ''
-                })
+                $(window).on('beforeunload', function () { return '' })
             },
             complete: function () {
                 $btn.prop('disabled', false)
