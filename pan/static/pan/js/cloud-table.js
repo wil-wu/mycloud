@@ -121,7 +121,7 @@ $(document).ready(function () {
         let checks = toggleView === 'customView' ? $('.fixed-table-custom-view input[type=checkbox]:checked') : cloudTable.bootstrapTable('getSelections')
 
         if (checks.length === 0) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText('没有选择任何文件')
             toast.getToast().show()
         } else {
@@ -497,11 +497,11 @@ $(document).ready(function () {
         let use = size + _used
 
         if (use > _storage) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText('剩余空间不足')
             toast.getToast().show()
         } else if (size > MAX_UPLOAD_FILE_SIZE) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText(`单次上传不能超过${custom.fileSizeFormat(MAX_UPLOAD_FILE_SIZE)}`)
             toast.getToast().show()
         } else {
@@ -531,15 +531,15 @@ $(document).ready(function () {
         let use = size + _used
 
         if (use > _storage) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText('剩余空间不足')
             toast.getToast().show()
         } else if (use > MAX_UPLOAD_FILE_SIZE) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText(`单次上传不能超过${custom.fileSizeFormat(MAX_UPLOAD_FILE_SIZE)}`)
             toast.getToast().show()
         } else if (upload_nums > DATA_UPLOAD_MAX_NUMBER_FIELDS) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText(`上传条目数超过${DATA_UPLOAD_MAX_NUMBER_FIELDS}限制`)
             toast.getToast().show()
         } else {
@@ -569,7 +569,7 @@ $(document).ready(function () {
             if (res.code === 200) {
                 _uploadBinary(url, data, use, uuid)
             } else {
-                toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+                toast.setIcon('fas fa-exclamation-circle text-warning')
                 toast.setText(res.msg)
                 toast.getToast().show()
             }
@@ -633,7 +633,7 @@ $(document).ready(function () {
                 })
 
                 xhr.upload.addEventListener('abort', function () {
-                    toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+                    toast.setIcon('fas fa-exclamation-circle text-warning')
                     toast.setText('上传已取消')
                     toast.getToast().show()
                 })
@@ -643,12 +643,12 @@ $(document).ready(function () {
             success: function (res) {
                 if (res.code === 200) {
                     $('#used').text(custom.fileSizeFormat(use))
-                    toast.setIcon('fas fa-check-circle fa-lg text-success')
+                    toast.setIcon('fas fa-check-circle text-success')
                     cloudTable.bootstrapTable('refresh', {query: {folderUUID: uuid}})
                     _used = use
                     localStorage.setItem('used', use)
                 } else {
-                    toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+                    toast.setIcon('fas fa-exclamation-circle text-warning')
                 }
                 toast.setText(res.msg)
                 toast.getToast().show()

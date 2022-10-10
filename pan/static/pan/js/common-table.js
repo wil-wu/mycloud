@@ -111,10 +111,10 @@
     function alterCallback(url, data, toast, table, folderUUID) {
         return $.post(url, JSON.stringify(data), function (res) {
             if (res.code === 200) {
-                toast.setIcon('fas fa-check-circle fa-lg text-success')
+                toast.setIcon('fas fa-check-circle text-success')
                 table.bootstrapTable('refresh', {query: {folderUUID: folderUUID}})
             } else {
-                toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
+                toast.setIcon('fas fa-exclamation-circle text-danger')
             }
             toast.setText(res.msg)
             toast.getToast().show()

@@ -18,7 +18,6 @@ urlpatterns = [
 
 # 下载和分享页
 urlpatterns += [
-    path('reset-done/<str:param>', views.ResetDoneView.as_view(), name='reset-done'),
     path('download/<uuid:guid>', views.FileDownloadView.as_view(), name='download'),
     path('share/<str:signature>', views.ShareLinkView.as_view(), name='share-link'),
 ]
@@ -46,7 +45,8 @@ urlpatterns += [
     path('login', views.LoginView.as_view(), name='login'),
     path('register', views.RegisterView.as_view(), name='register'),
     path('logout', views.LoginOutView.as_view(), name='logout'),
-    path('reset-password', views.ResetPasswordView.as_view(), name='reset-password')
+    path('reset-password', views.ResetPasswordView.as_view(), name='reset-password'),
+    path('reset-done/<str:param>', views.ResetDoneView.as_view(), name='reset-done'),
 ]
 
 # 个人信息

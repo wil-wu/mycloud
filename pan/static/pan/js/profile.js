@@ -38,7 +38,7 @@ $(document).ready(function () {
     $("#uploadInput").on('change', function () {
         let file = this.files[0]
         if (file.size > MAX_AVATAR_SIZE) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
+            toast.setIcon('fas fa-exclamation-circle text-danger')
             toast.setText(`上传图片不能大于${custom.fileSizeFormat(MAX_AVATAR_SIZE)}`)
             toast.getToast().show()
         } else {
@@ -91,12 +91,12 @@ $(document).ready(function () {
                 },
                 success: function (res) {
                     if (res.code === 200) {
-                        toast.setIcon('fas fa-check-circle fa-lg text-success')
+                        toast.setIcon('fas fa-check-circle text-success')
                         setTimeout(function () {
                             location.replace(ctx + '/profile')
                         }, 400)
                     } else {
-                        toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
+                        toast.setIcon('fas fa-exclamation-circle text-danger')
                     }
                     toast.setText(res.msg)
                     toast.getToast().show()
@@ -121,7 +121,7 @@ $(document).ready(function () {
             },
             success: function (res) {
                 if (res.code === 200) {
-                    toast.setIcon('fas fa-check-circle fa-lg text-success')
+                    toast.setIcon('fas fa-check-circle text-success')
                     toast.setText(res.msg)
                     toast.getToast().show()
                     setTimeout(function () {
@@ -129,7 +129,7 @@ $(document).ready(function () {
                     }, 1000)
                 } else {
                     if (type === 'message') {
-                        toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
+                        toast.setIcon('fas fa-exclamation-circle text-danger')
                         toast.setText(res.msg)
                         toast.getToast().show()
                     } else {

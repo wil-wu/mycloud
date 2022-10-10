@@ -56,7 +56,7 @@ $(document).ready(function () {
         let checks = historyTable.bootstrapTable('getSelections')
 
         if (checks.length === 0) {
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-warning')
+            toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText('没有选择任何记录')
             toast.getToast().show()
         } else {

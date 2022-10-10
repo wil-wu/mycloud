@@ -59,7 +59,7 @@ $(document).ready(function () {
                         done: function () {
                             setTimeout(function () {
                                 if (next) {
-                                    location.href = ctx + next
+                                    location.replace(ctx + next)
                                 } else {
                                     location.replace(ctx)
                                 }

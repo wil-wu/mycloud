@@ -59,7 +59,7 @@ $(document).ready(function () {
 
         player.on('error', function () {
             toast.setText('加载失败')
-            toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
+            toast.setIcon('fas fa-exclamation-circle text-danger')
             toast.getToast().show()
         })
     }
@@ -82,12 +82,12 @@ $(document).ready(function () {
             },
             onloaderror: function () {
                 toast.setText('加载失败')
-                toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
+                toast.setIcon('fas fa-exclamation-circle text-danger')
                 toast.getToast().show()
             },
             onplayerror: function () {
                 toast.setText('播放失败')
-                toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
+                toast.setIcon('fas fa-exclamation-circle text-danger')
                 toast.getToast().show()
             }
         })
