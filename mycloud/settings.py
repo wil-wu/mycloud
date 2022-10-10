@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+from secrets import token_hex
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,6 +26,15 @@ SECRET_KEY = 'django-insecure-wx8cyt+)#o!8f&7rrz!$5-s$*e_kciv44gycm!l0y9p83js83j
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+
+EMAIL_HOST = 'smtp.qq.com'
+EMAIL_PORT = '587'
+EMAIL_HOST_USER = '******'
+EMAIL_HOST_PASSWORD = '******'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 
 # Application definition
 
@@ -84,8 +94,8 @@ DATABASES = {
         'NAME': 'cloud',
         'HOST': '127.0.0.1',
         'PORT': '3306',
-        'USER': 'root',
-        'PASSWORD': 'wuweilong',
+        'USER': '***',
+        'PASSWORD': '******',
     }
 }
 
@@ -154,3 +164,10 @@ REST_FRAMEWORK = {
 # INTERNAL_IPS = [
 #     '127.0.0.1'
 # ]
+
+# reset token
+RESET_TOKEN = token_hex(8)
+
+RESET_PASSWORD = '123456'
+
+TOKEN_EXPIRY = 1800

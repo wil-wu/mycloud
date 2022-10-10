@@ -106,7 +106,7 @@ $(document).ready(function () {
     })
 
     // 修改回调
-    function alterCallback(url, formData, $btn, message) {
+    function alterCallback(url, formData, $btn, type) {
         $.ajax({
             url: url,
             method: 'POST',
@@ -128,15 +128,16 @@ $(document).ready(function () {
                         location.replace(ctx + '/profile')
                     }, 1000)
                 } else {
-                    if (message) {
+                    if (type === 'message') {
                         toast.setIcon('fas fa-exclamation-circle fa-lg text-danger')
                         toast.setText(res.msg)
                         toast.getToast().show()
                     } else {
                         let errors = res.data.errors
+                        let [validations, $form] = type === 'password' ? [passwordValidations, $passwordForm] : [infoValidations, $infoForm]
                         $.each(errors, function (key) {
-                            passwordValidations[key].elem.text(errors[key][0])
-                            $passwordForm.find(`input[name=${key}]`).addClass('is-invalid')
+                            validations[key].elem.text(errors[key][0])
+                            $form.find(`input[name=${key}]`).addClass('is-invalid')
                         })
                     }
                 }
@@ -158,8 +159,10 @@ $(document).ready(function () {
         } else {
             if (!custom.checkPassword($('#newPassword'), $('#confirmPassword'))) {
             } else {
+                passwordInputs.removeClass('is-invalid')
+
                 let formData = $passwordForm.serialize()
-                alterCallback(ctx + '/alter-password', formData, $(this))
+                alterCallback(ctx + '/alter-password', formData, $(this), 'password')
             }
         }
     })
@@ -175,8 +178,10 @@ $(document).ready(function () {
         if (!infoForm.checkValidity()) {
             custom.setInitial(infoValidations, infoInputs, $infoForm)
         } else {
+            infoInputs.removeClass('is-invalid')
+
             let formData = $infoForm.serialize()
-            alterCallback(ctx + '/alter-info', formData, $(this))
+            alterCallback(ctx + '/alter-info', formData, $(this), 'info')
         }
     })
 
@@ -187,7 +192,7 @@ $(document).ready(function () {
     $applyForm.find('#applyBtn').click(function () {
         if (applyForm.checkValidity()) {
             let formData = $applyForm.serialize()
-            alterCallback(ctx + '/msg-appr', formData, $(this), true)
+            alterCallback(ctx + '/msg-appr', formData, $(this), 'message')
         }
     })
 
@@ -198,7 +203,7 @@ $(document).ready(function () {
     $messageForm.find('#messageBtn').click(function () {
         if (messageForm.checkValidity()) {
             let formData = $messageForm.serialize()
-            alterCallback(ctx + '/msg-appr', formData, $(this), true)
+            alterCallback(ctx + '/msg-appr', formData, $(this), 'message')
         }
     })
 })

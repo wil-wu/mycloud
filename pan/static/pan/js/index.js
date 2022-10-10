@@ -26,6 +26,7 @@ $(document).ready(function () {
         })
     })
 
+
     /* 登录验证 */
     let $loginForm = $('#loginForm')
     let loginForm = $loginForm.get(0)
@@ -39,6 +40,7 @@ $(document).ready(function () {
         if (!loginForm.checkValidity()) {
             custom.setInitial(loginValidations, loginInputs, $loginForm)
         } else {
+            loginInputs.removeClass('is-invalid')
             let formData = $loginForm.serialize()
 
             $.post(ctx + '/login', formData, function (res) {
@@ -76,6 +78,7 @@ $(document).ready(function () {
         }
     })
 
+
     /* 注册验证 */
     let $registerForm = $('#registerForm')
     let registerForm = $registerForm.get(0)
@@ -89,8 +92,8 @@ $(document).ready(function () {
         if (!registerForm.checkValidity()) {
             custom.setInitial(registerValidations, registerInputs, $registerForm)
         } else {
-            if (!custom.checkPassword($('#registerPassword'), $('#confirmPassword'))) {
-            } else {
+            registerInputs.removeClass('is-invalid')
+            if (custom.checkPassword($('#registerPassword'), $('#confirmPassword'))) {
                 let formData = $registerForm.serialize()
 
                 $.post(ctx + '/register', formData, function (res) {
@@ -116,6 +119,53 @@ $(document).ready(function () {
         }
     })
 
+
+    // 重置密码
+    let $resetForm = $('#resetForm')
+    let resetForm = $resetForm.get(0)
+
+    let resetInputs = $resetForm.find('input')
+    let resetValidations = custom.getInitial(resetInputs)
+
+    let $resetBtn = $('#resetBtn')
+
+    $resetBtn.click(function () {
+        if (!resetForm.checkValidity()) {
+            custom.setInitial(registerValidations, registerInputs, $resetForm)
+        } else {
+            $resetBtn.prop('disabled', true)
+            resetInputs.removeClass('is-invalid')
+            let formData = $resetForm.serialize()
+
+            $.post(ctx + '/reset-password', formData, function (res) {
+                if (res.code === 200) {
+                    let age = 60
+                    let timer = setInterval(function () {
+                        if (age === 0) {
+                            clearInterval(timer)
+                            $resetBtn.text('确认')
+                            $resetBtn.prop('disabled', false)
+                        }
+                        $resetBtn.text(age)
+                        age--
+                    }, 1000)
+
+                    toast.setText(res.msg)
+                    toast.getToast().show()
+                } else {
+                    let errors = res.data.errors
+                    $.each(errors, function (key) {
+                        resetValidations[key].elem.text(errors[key][0])
+                        $resetForm.find(`input[name=${key}]`).addClass('is-invalid')
+                    })
+                    $resetBtn.prop('disabled', false)
+                }
+            })
+            $resetForm.removeClass('was-validated')
+        }
+    })
+
+
     // enter绑定
     $.each($('form'), function (i, item) {
         let form = $(item)
@@ -127,6 +177,7 @@ $(document).ready(function () {
             }
         })
     })
+
 
     // 接收分享文件
     let cloudBlock = $('#cloudBlock')

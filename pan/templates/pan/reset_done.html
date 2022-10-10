@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="zh" class="h-100">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.css" rel="stylesheet">
+    <title>重置信息</title>
+</head>
+<body class="h-100">
+    <div class="d-flex justify-content-center align-items-center h-100">
+        <section class="text-center">
+            <h3 class="mb-3">
+                {% if auth %}你已重置密码，请及时修改{% else %}该链接已过期{% endif %}
+            </h3>
+            <a class="btn btn-dark" href="/">回到主页</a>
+        </section>
+    </div>
+</body>
+</html>

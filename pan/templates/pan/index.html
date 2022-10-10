@@ -191,11 +191,14 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-12">
+                                <div class="col-12 d-flex justify-content-between">
                                     <div class="form-check">
                                         <input class="form-check-input me-2" id="remember" name="remember"
                                                type="checkbox" checked/>
                                         <label class="form-check-label" for="remember">记住我</label>
+                                    </div>
+                                    <div>
+                                        <a href="javascript:void(0)" data-mdb-toggle="modal" data-mdb-target="#resetModal">忘记密码？</a>
                                     </div>
                                 </div>
                                 <div class="col-12">
@@ -261,6 +264,31 @@
         </section>
     </div>
 </main>
+<div class="modal fade" id="resetModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">重置密码</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>填写用户名，我会给该用户绑定的邮箱发送一个验证邮件</p>
+                <p class="text-muted small">注：收不到邮件请检查网络和邮箱的pop3/smtp服务是否开启</p>
+                <form id="resetForm" novalidate>
+                    <div class="form-outline">
+                        <input class="form-control" id="resetName" name="resetName" required>
+                        <label class="form-label" for="resetName">用户名</label>
+                        <div class="invalid-feedback">请输入验证信息</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="resetBtn">确认</button>
+            </div>
+        </div>
+    </div>
+</div>
 {% endif %}
 <!-- 验证通知 -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">

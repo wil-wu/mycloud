@@ -7,9 +7,17 @@ My Graduation Project
 ```
 pip install -r requirements.txt
 ```
-2. 检查配置文件，修改数据库配置
+2. 检查配置文件，修改邮箱和数据库配置
 ```
 # mycloud/settings.py
+
+EMAIL_HOST = 'smtp.qq.com'
+EMAIL_PORT = '587'
+EMAIL_HOST_USER = '******'
+EMAIL_HOST_PASSWORD = '******'
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 
 DATABASES = {
     'default': {

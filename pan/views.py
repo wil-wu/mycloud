@@ -8,9 +8,11 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
-from django.core.signing import BadSignature, Signer
+from django.core.signing import Signer, TimestampSigner, BadSignature, SignatureExpired
+from django.core.mail import send_mail
 from django.http import FileResponse
 from django.shortcuts import render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from django.views.generic import View, TemplateView, RedirectView
 from rest_framework.permissions import IsAuthenticated
@@ -84,6 +86,27 @@ class ShareLinkView(TemplateView):
             context['file'] = share.user_file
             context['share'] = share
         context['expired'] = expired
+        return context
+
+
+class ResetDoneView(TemplateView):
+    """重置密码结果"""
+    template_name = 'pan/reset_done.html'
+
+    def get_context_data(self, **kwargs):
+        param = self.kwargs.get('param')
+        context = super().get_context_data()
+        try:
+            auth = TimestampSigner().unsign_object(param, max_age=settings.TOKEN_EXPIRY)
+            if auth['token'] != settings.RESET_TOKEN:
+                context['auth'] = False
+            else:
+                user = User.objects.get(username=auth['user'])
+                user.set_password(settings.RESET_PASSWORD)
+                user.save()
+                context['auth'] = True
+        except (BadSignature, SignatureExpired):
+            context['auth'] = False
         return context
 
 
@@ -163,18 +186,54 @@ class AlterPasswordView(LoginRequiredMixin, View):
         return AjaxObj(500, '失败', {'errors': form.errors}).get_response()
 
 
+class ResetPasswordView(View):
+    """重置密码"""
+
+    def post(self, request):
+        username = request.POST.get('resetName').strip()
+        queryset = User.objects.filter(username=username)
+        if not queryset.exists():
+            return AjaxObj(500, '错误', {'errors': {'resetName': ['用户名不存在']}}).get_response()
+
+        user = queryset[0]
+        if user.email == '':
+            return AjaxObj(500, '错误', {'errors': {'resetName': ['该用户未绑定邮箱']}}).get_response()
+
+        auth = {'user': user.username, 'token': settings.RESET_TOKEN}
+        context = {'scheme': request.META.get('wsgi.url_scheme'),
+                   'host': request.META.get('HTTP_HOST'),
+                   'param': TimestampSigner().sign_object(auth),
+                   'password': settings.RESET_PASSWORD}
+        html = render_to_string('pan/reset.html', context)
+        send_mail(
+            subject='Tiny Cloud',
+            message=html,
+            from_email=None,
+            recipient_list=[user.email],
+            fail_silently=True,
+            html_message=html
+        )
+        return AjaxObj(msg='已发送验证邮件').get_response()
+
+
 class AlterInfoView(LoginRequiredMixin, View):
     """修改信息"""
 
     def post(self, request):
         form = InfoForm(request.POST)
         if form.is_valid():
-            profile = request.user.profile
-            profile.gender = form.cleaned_data['gender']
-            profile.update_by = request.user
-            request.user.email = form.cleaned_data['email']
+            user = request.user
+            profile = user.profile
+            email = form.cleaned_data['email']
+            gender = form.cleaned_data['gender']
+            if email != '' and User.objects.filter(email=email).exclude(username=user.username).exists():
+                return AjaxObj(500, '失败', {'errors': {'email': ['已有用户绑定该邮箱']}}).get_response()
+
+            profile.gender = gender
+            profile.update_by = user
+            user.email = email
             profile.save()
-            request.user.save()
+            user.save()
             return AjaxObj(msg='更改成功').get_response()
 
         return AjaxObj(500, '失败', {'errors': form.errors}).get_response()
