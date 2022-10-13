@@ -3,6 +3,7 @@ My Graduation Project
 
 [演示网站 tiny cloud](https://cloudself.net)
 ### 本地运行
+___
 1. 安装依赖
 ```
 pip install -r requirements.txt
@@ -47,3 +48,17 @@ python manage.py createsuperuser
 ```
 python manage.py runserver
 ```
+### 页面截图
+___
+首页  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/index.jpeg)  
+登录  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/auth.png)  
+文件  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/main.jpeg)   
+文件详情  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/detail.jpeg)  
+个人信息  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/info.jpeg)  
+后台  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/admin.jpeg)
