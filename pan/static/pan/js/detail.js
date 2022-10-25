@@ -6,7 +6,7 @@ $(document).ready(function () {
     let info = $('#info')
     let file
 
-    $.get(ctx + '/api/file/', {uuid: uuid}, function (res) {
+    $.get(ctx + '/api/file', {uuid: uuid}, function (res) {
         file = res[0]
         file.url = ctx + '/media/' + file.file_path
     }).done(function () {
