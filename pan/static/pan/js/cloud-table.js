@@ -259,6 +259,8 @@ $(document).ready(function () {
         let timer
         let duration = 500
         let click = true
+        let silent = true
+        let press = false
         let multiple = false
         let cards = $('.custom-view')
         let isMobile = custom.isMobile()
@@ -286,34 +288,30 @@ $(document).ready(function () {
             })
         } else {
             cards.on('touchstart', function () {
+                timer = setTimeout(function () { press = true }, duration)
+            }).on('touchmove', function () {
+                silent = false
+            }).on('touchend', function () {
+                clearTimeout(timer)
                 let checks = cards.find('input[type=checkbox]')
 
-                if (multiple) {
+                if (!multiple && press && silent) {
+                    multiple = true
+                    click = false
+                    checks.removeClass('d-none')
                     checkIt.call(this)
-                    if (cards.find('input[type=checkbox]:checked').length === 0) {
+                } else if (click && silent) {
+                    jumpTo.call(this)
+                } else if (!press && multiple && silent) {
+                    checkIt.call(this)
+                    if (checks.filter(":checked").length === 0) {
                         multiple = false
+                        click = true
                         checks.addClass('d-none')
                     }
-                } else {
-                    timer = setTimeout(function () {
-                        if (cards.find('input[type=checkbox]:checked').length === 0) {
-                            multiple = true
-                            click = false
-                            checks.removeClass('d-none')
-                        }
-                        checkIt.call(this)
-                    }.bind(this), duration)
                 }
-            }).on('touchend', function () {
-                if (timer) {
-                    clearTimeout(timer)
-                }
-                if (click) {
-                    jumpTo.call(this)
-                }
-                if (!multiple) {
-                    click = true
-                }
+                press = false
+                silent = true
             })
         }
     }
