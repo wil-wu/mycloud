@@ -21,6 +21,7 @@ from rest_framework.viewsets import ModelViewSet
 from pan.forms import UserBaseForm, InfoForm, AvatarForm, PasswordForm
 from pan.models import (GenericFile, UserFile, UserDir, FileShare, ShareRecord,
                         FileType, UserApproval, UserMessage, Notice)
+from pan.paginations import NoticeResultSetPagination
 from pan.serializers import FileSerializer, FileShareSerializer, FolderSerializer, NoticeSerializer
 from pan.utils import AjaxObj, get_key_signature, get_dir_size, file_size_format
 
@@ -669,9 +670,9 @@ class FileViewSet(ModelViewSet):
 class NoticeViewSet(ModelViewSet):
     """通知api"""
     serializer_class = NoticeSerializer
-    permission_classes = [IsAuthenticated]
     queryset = Notice.objects.all()
-    pagination_class = None
+    permission_classes = [IsAuthenticated]
+    pagination_class = NoticeResultSetPagination
 
 
 # 异常视图
