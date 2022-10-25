@@ -7,7 +7,7 @@ $(document).ready(function () {
     let modal = new custom.Modal($('#modal'))
 
     binTable.bootstrapTable({
-        url: ctx + '/api/bin/',
+        url: ctx + '/api/bin',
         dataField: 'results',
         totalField: 'count',
         sidePagination: 'server',
