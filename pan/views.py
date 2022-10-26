@@ -1,7 +1,7 @@
 from datetime import timedelta
 from json import loads as json_loads
 from pathlib import Path
-from shutil import rmtree, make_archive, move as file_move
+from shutil import rmtree, move as file_move
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
@@ -23,7 +23,7 @@ from pan.models import (GenericFile, UserFile, UserDir, FileShare, ShareRecord,
                         FileType, UserApproval, UserMessage, Notice)
 from pan.paginations import NoticeResultSetPagination
 from pan.serializers import FileSerializer, FileShareSerializer, FolderSerializer, NoticeSerializer
-from pan.utils import AjaxObj, get_key_signature, get_dir_size, file_size_format
+from pan.utils import AjaxObj, get_key_signature, get_dir_size, make_archive_bytes, file_size_format
 
 
 class IndexView(TemplateView):
@@ -266,10 +266,7 @@ class FileDownloadView(View):
         if file.file_cate == '0':
             return FileResponse(open(root / file.file_path, 'rb'), as_attachment=True)
         else:
-            des = root / Path('zips/cloud')
-            file_path = root / file.file_path
-            return FileResponse(open(make_archive(des, 'zip', file_path.parent, file_path.stem), 'rb'),
-                                as_attachment=True)
+            return FileResponse(make_archive_bytes(root / file.file_path), as_attachment=True, filename='cloud.zip')
 
 
 class DuplicatedCheck(LoginRequiredMixin, View):

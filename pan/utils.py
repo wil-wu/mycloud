@@ -1,6 +1,9 @@
+import os
 import hmac
 import uuid
 import secrets
+import zipfile
+from io import BytesIO
 from pathlib import Path
 
 from django.core.signing import Signer
@@ -34,6 +37,24 @@ def get_unique_filename(instance, filename):
 # 计算文件夹大小
 def get_dir_size(path):
     return sum(f.stat().st_size for f in path.glob('**/*') if f.is_file())
+
+
+# 压缩文件夹并返回字节对象
+def make_archive_bytes(dir_path):
+    buffer = BytesIO()
+    dl = len(str(dir_path.parent)) + 1
+
+    with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zipper:
+        for basedir, subdir, files in os.walk(dir_path):
+            base = Path(basedir)
+            parent = Path(basedir[dl:])
+            for file in files:
+                zipper.write(base / file, parent / file)
+            for folder in subdir:
+                zipper.writestr(str(parent / folder) + '/', '')
+
+    buffer.seek(0)
+    return buffer
 
 
 # 文件大小格式化
