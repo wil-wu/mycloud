@@ -48,6 +48,7 @@ def make_archive_bytes(dir_path):
         for basedir, subdir, files in os.walk(dir_path):
             base = Path(basedir)
             parent = Path(basedir[dl:])
+            zipper.writestr(str(parent) + '/', '')
             for file in files:
                 zipper.write(base / file, parent / file)
             for folder in subdir:
