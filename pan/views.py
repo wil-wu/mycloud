@@ -7,7 +7,6 @@ from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from django.core.signing import Signer, TimestampSigner, BadSignature, SignatureExpired
 from django.core.mail import send_mail
 from django.http import FileResponse
@@ -75,7 +74,7 @@ class ShareLinkView(TemplateView):
         context = super().get_context_data()
         try:
             share = FileShare.objects.select_related('user_file').get(secret_key=Signer().unsign(signature))
-        except BadSignature:
+        except (BadSignature, FileShare.DoesNotExist):
             context['expired'] = True
             return context
         expired = timezone.now() > share.expire_time
@@ -124,9 +123,9 @@ class LoginView(View):
                     request.session.set_expiry(0)
                 return AjaxObj(msg='登录成功', data=request.session['cloud']).get_response()
 
-            return AjaxObj(500, '失败', {'errors': {'username': ['用户名错误或密码错误']}}).get_response()
+            return AjaxObj(400, '失败', {'errors': {'username': ['用户名错误或密码错误']}}).get_response()
 
-        return AjaxObj(500, '失败', {'errors': form.errors}).get_response()
+        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
 
 
 class RegisterView(View):
@@ -136,13 +135,13 @@ class RegisterView(View):
         form = UserBaseForm(request.POST)
         if form.is_valid():
             if User.objects.filter(username=form.cleaned_data['username']).exists():
-                return AjaxObj(500, '失败', {'errors': {'username': ['用户名已存在']}}).get_response()
+                return AjaxObj(400, '失败', {'errors': {'username': ['用户名已存在']}}).get_response()
 
             User.objects.create_user(username=form.cleaned_data['username'],
                                      password=form.cleaned_data['password'])
             return AjaxObj(msg='注册成功').get_response()
 
-        return AjaxObj(500, '失败', {'errors': form.errors}).get_response()
+        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
 
 
 class LoginOutView(RedirectView):
@@ -161,14 +160,14 @@ class AlterAvatarView(LoginRequiredMixin, View):
         form = AvatarForm(request.POST, request.FILES)
         if form.is_valid():
             if form.cleaned_data['avatar'].size > settings.MAX_AVATAR_SIZE:
-                return AjaxObj(500, f'上传图片不能大于{file_size_format(settings.MAX_AVATAR_SIZE)}').get_response()
+                return AjaxObj(400, f'上传图片不能大于{file_size_format(settings.MAX_AVATAR_SIZE)}').get_response()
             profile = request.user.profile
             profile.avatar = form.cleaned_data['avatar']
             profile.update_by = request.user
             profile.save()
             return AjaxObj(msg='上传成功').get_response()
 
-        return AjaxObj(500, '不合法文件').get_response()
+        return AjaxObj(400, '不合法文件').get_response()
 
 
 class AlterPasswordView(LoginRequiredMixin, View):
@@ -182,9 +181,9 @@ class AlterPasswordView(LoginRequiredMixin, View):
                 request.user.save()
                 return AjaxObj(msg='修改成功').get_response()
 
-            return AjaxObj(500, '失败', {'errors': {'oldPassword': ['原密码错误']}}).get_response()
+            return AjaxObj(400, '失败', {'errors': {'oldPassword': ['原密码错误']}}).get_response()
 
-        return AjaxObj(500, '失败', {'errors': form.errors}).get_response()
+        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
 
 
 class ResetPasswordView(View):
@@ -194,11 +193,11 @@ class ResetPasswordView(View):
         username = request.POST.get('resetName').strip()
         queryset = User.objects.filter(username=username)
         if not queryset.exists():
-            return AjaxObj(500, '错误', {'errors': {'resetName': ['用户名不存在']}}).get_response()
+            return AjaxObj(400, '错误', {'errors': {'resetName': ['用户名不存在']}}).get_response()
 
-        user = queryset[0]
+        user = queryset.get()
         if user.email == '':
-            return AjaxObj(500, '错误', {'errors': {'resetName': ['该用户未绑定邮箱']}}).get_response()
+            return AjaxObj(400, '错误', {'errors': {'resetName': ['该用户未绑定邮箱']}}).get_response()
 
         auth = {'user': user.username, 'token': settings.RESET_TOKEN}
         context = {'scheme': request.META.get('wsgi.url_scheme'),
@@ -228,7 +227,7 @@ class AlterInfoView(LoginRequiredMixin, View):
             email = form.cleaned_data['email']
             gender = form.cleaned_data['gender']
             if email != '' and User.objects.filter(email=email).exclude(username=user.username).exists():
-                return AjaxObj(500, '失败', {'errors': {'email': ['已有用户绑定该邮箱']}}).get_response()
+                return AjaxObj(400, '失败', {'errors': {'email': ['已有用户绑定该邮箱']}}).get_response()
 
             profile.gender = gender
             profile.update_by = user
@@ -237,7 +236,7 @@ class AlterInfoView(LoginRequiredMixin, View):
             user.save()
             return AjaxObj(msg='更改成功').get_response()
 
-        return AjaxObj(500, '失败', {'errors': form.errors}).get_response()
+        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
 
 
 class MsgApprView(LoginRequiredMixin, View):
@@ -246,7 +245,7 @@ class MsgApprView(LoginRequiredMixin, View):
     def post(self, request):
         message = request.POST.get('message').strip()
         if message == '' or message is None:
-            return AjaxObj(500, '不合法信息').get_response()
+            return AjaxObj(400, '不合法信息').get_response()
         if request.POST.get('way') == 'apply':
             msg = '成功提交申请'
             UserApproval.objects.create(content=message, create_by=request.user)
@@ -262,7 +261,11 @@ class FileDownloadView(View):
     def get(self, request, *args, **kwargs):
         uuid = self.kwargs.get('guid')
         root = settings.MEDIA_ROOT
-        file = GenericFile.objects.get(file_uuid=uuid)
+        try:
+            file = GenericFile.objects.get(file_uuid=uuid)
+        except GenericFile.DoesNotExist:
+            return AjaxObj(400, "文件不存在").get_response()
+
         if file.file_cate == '0':
             return FileResponse(open(root / file.file_path, 'rb'), as_attachment=True)
         else:
@@ -277,7 +280,7 @@ class DuplicatedCheck(LoginRequiredMixin, View):
         path = Path(folder.file_path) / request.GET.get('uploadName')
 
         if (Path(settings.MEDIA_ROOT) / path).exists():
-            return AjaxObj(500, '目标文件夹内存在同名文件，请注意回收站').get_response()
+            return AjaxObj(400, '目标文件夹内存在同名文件，请注意回收站').get_response()
 
         return AjaxObj().get_response()
 
@@ -292,7 +295,7 @@ class FileUploadView(LoginRequiredMixin, View):
 
         use = request.session['cloud']['used'] + file.size
         if use > request.session['cloud']['storage']:
-            return AjaxObj(500, '剩余空间不足').get_response()
+            return AjaxObj(400, '剩余空间不足').get_response()
 
         folder = request.user.files.get(file_uuid=request.POST.get('folderUUID', request.session['root']))
         file_path = Path(folder.file_path) / file.name
@@ -329,11 +332,11 @@ class FolderUploadView(LoginRequiredMixin, View):
 
         path_nums = len(paths)
         if path_nums * 2 > settings.DATA_UPLOAD_MAX_NUMBER_FIELDS:
-            return AjaxObj(500, f'上传条目数超过{settings.DATA_UPLOAD_MAX_NUMBER_FIELDS}限制').get_response()
+            return AjaxObj(400, f'上传条目数超过{settings.DATA_UPLOAD_MAX_NUMBER_FIELDS}限制').get_response()
 
         use = request.session['cloud']['used'] + sum(s.size for s in files)
         if use > request.session['cloud']['storage']:
-            return AjaxObj(500, '剩余空间不足').get_response()
+            return AjaxObj(400, '剩余空间不足').get_response()
 
         folder = request.user.files.get(file_uuid=request.POST.get('folderUUID', request.session['root']))
         folder_path = Path(folder.file_path)
@@ -431,7 +434,7 @@ class ShareGetView(View):
         key = request.POST.get('key')
         try:
             share = FileShare.objects.select_related('user_file').get(secret_key=key)
-        except ObjectDoesNotExist:
+        except FileShare.DoesNotExist:
             return AjaxObj(400, '口令已过期').get_response()
 
         if timezone.now() > share.expire_time:
@@ -456,8 +459,8 @@ class ShareDelete(LoginRequiredMixin, View):
             try:
                 FileShare.objects.select_related('user_file').filter(
                     user_file__create_by=request.user).get(id=i).delete()
-            except ObjectDoesNotExist:
-                return AjaxObj(500, "所选记录中有记录不存在或已删除").get_response()
+            except FileShare.DoesNotExist:
+                return AjaxObj(400, "所选记录中有记录不存在或已删除").get_response()
         return AjaxObj(200, '成功删除所选记录').get_response()
 
 
@@ -467,13 +470,13 @@ class FileMoveView(LoginRequiredMixin, View):
     def post(self, request):
         data = json_loads(request.body)
         if data.get('src') == data.get('dst'):
-            return AjaxObj(500, '目标文件夹为本身').get_response()
+            return AjaxObj(400, '目标文件夹为本身').get_response()
 
         src = request.user.files.get(file_uuid=data.get('src'))
         dst = request.user.files.get(file_uuid=data.get('dst', request.session['root']))
 
         if request.user.files.filter(folder=dst, file_cate=src.file_cate, file_name=src.file_name).exists():
-            return AjaxObj(500, '目标文件夹内存在同名文件').get_response()
+            return AjaxObj(400, '目标文件夹内存在同名文件').get_response()
 
         dirs = []
         src_folder = src.folder
@@ -517,7 +520,7 @@ class FileDeleteView(LoginRequiredMixin, View):
                 discard += file.file_size
                 if folder is None:
                     folder = file.folder
-            except ObjectDoesNotExist:
+            except GenericFile.DoesNotExist:
                 break
             real_path = settings.MEDIA_ROOT / file.file_path
             if file.file_cate == '0':
@@ -528,7 +531,7 @@ class FileDeleteView(LoginRequiredMixin, View):
         else:
             code, msg = 200, '成功删除所选文件'
         if code is None and msg is None:
-            code, msg = 500, '所选文件中有文件不存在或已删除'
+            code, msg = 400, '所选文件中有文件不存在或已删除'
 
         # 更新父文件夹大小
         while folder is not None:
@@ -562,8 +565,8 @@ class FileTrashView(LoginRequiredMixin, View):
         for uuid in uuids:
             try:
                 file = request.user.files.get(file_uuid=uuid)
-            except ObjectDoesNotExist:
-                return AjaxObj(500, '所选文件中有文件不存在或已删除').get_response()
+            except GenericFile.DoesNotExist:
+                return AjaxObj(400, '所选文件中有文件不存在或已删除').get_response()
             file.del_flag = del_flag
             file.update_by = request.user
             objs.append(file)
