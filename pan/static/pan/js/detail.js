@@ -12,38 +12,47 @@ $(document).ready(function () {
             file.type = file.file_type.substring(1)
             setInfo()
 
-            $.ajax(ctx + `/file-blob/${uuid}`, {
-                method: 'GET',
-                data: {blob: true},
-                xhrFields: {responseType: 'blob'},
-                success: function (res) {
-                    file.blobURL = URL.createObjectURL(new Blob([res]))
-                    for (let key in _media) {
-                        if (_media[key].indexOf(file.file_type) !== -1) {
-                            if (file.file_size > _preview[key]) {
-                                $('#notPermission').removeClass('d-none').find('.btn-info').click(function () {
-                                    location.href = ctx + '/file-blob/' + file.file_uuid
-                                })
-                                return
-                            } else {
-                                if (key === 'video') {
-                                    videoPlayer()
-                                    return
-                                } else if (key === 'audio') {
-                                    info.find('#tip').text('暂不支持拖动音频播放进度条')
-                                    audioPlayer()
-                                    return
-                                } else if (key === 'image') {
-                                    imageDisplay()
-                                    return
+            for (let key in _media) {
+                if (_media[key].indexOf(file.file_type) !== -1) {
+                    if (file.file_size > _preview[key]) {
+                        $('#notPermission').removeClass('d-none').find('.btn-info').click(function () {
+                            location.href = ctx + '/file-blob/' + file.file_uuid
+                        })
+                    } else {
+                        $.ajax(ctx + `/file-blob/${uuid}`, {
+                            method: 'GET',
+                            data: {blob: true},
+                            xhrFields: {responseType: 'blob'},
+                            beforeSend: function () {
+                                toast.setText('正在加载资源')
+                                toast.setIcon('fas fa-info-circle text-info')
+                                toast.getToast().show()
+                            },
+                            success: function (res) {
+                                file.blobURL = URL.createObjectURL(new Blob([res]))
+                                switch (key) {
+                                    case "video":
+                                        videoPlayer()
+                                        break
+                                    case "audio":
+                                        info.find('#tip').text('暂不支持拖动音频播放进度条')
+                                        audioPlayer()
+                                        break
+                                    case "image":
+                                        imageDisplay()
+                                        break
                                 }
+                                toast.setText('加载完成')
+                                toast.setIcon('fas fa-info-circle text-info')
+                                toast.getToast().show()
                             }
-                        }
+                        })
                     }
-                    $('#notSupport').removeClass('d-none').find('.btn-info').click(function () {
-                        location.href = ctx + '/file-blob/' + file.file_uuid
-                    })
+                    return
                 }
+            }
+            $('#notSupport').removeClass('d-none').find('.btn-info').click(function () {
+                location.href = ctx + '/file-blob/' + file.file_uuid
             })
         }
     })
