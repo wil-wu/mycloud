@@ -2,6 +2,7 @@ from datetime import timedelta
 from json import loads as json_loads
 from pathlib import Path
 from shutil import rmtree, move as file_move
+from uuid import UUID
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
@@ -255,11 +256,12 @@ class MsgApprView(LoginRequiredMixin, View):
         return AjaxObj(200, msg).get_response()
 
 
-class FileDownloadView(View):
+class FileBlobView(View):
     """下载文件"""
 
     def get(self, request, *args, **kwargs):
-        uuid = self.kwargs.get('guid')
+        uuid = self.kwargs.get('uuid')
+        blob = self.request.GET.get('blob')
         root = settings.MEDIA_ROOT
         try:
             file = GenericFile.objects.get(file_uuid=uuid)
@@ -267,7 +269,10 @@ class FileDownloadView(View):
             return AjaxObj(400, "文件不存在").get_response()
 
         if file.file_cate == '0':
-            return FileResponse(open(root / file.file_path, 'rb'), as_attachment=True)
+            response = FileResponse(open(root / file.file_path, 'rb'), as_attachment=True)
+            if blob:
+                response.as_attachment = False
+            return response
         else:
             return FileResponse(make_archive_bytes(root / file.file_path), as_attachment=True, filename='cloud.zip')
 
@@ -663,7 +668,10 @@ class FileViewSet(ModelViewSet):
     pagination_class = None
 
     def get_queryset(self):
-        uuid = self.request.query_params.get('uuid')
+        try:
+            uuid = UUID(hex=self.request.query_params.get('uuid'))
+        except ValueError:
+            return GenericFile.objects.none()
         return self.request.user.files.filter(file_uuid=uuid, file_cate='0')
 
 

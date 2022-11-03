@@ -16,22 +16,18 @@ urlpatterns = [
     path('detail', views.FileDetailView.as_view(), name='detail'),
 ]
 
-# 下载和分享页
-urlpatterns += [
-    path('download/<uuid:guid>', views.FileDownloadView.as_view(), name='download'),
-    path('share/<str:signature>', views.ShareLinkView.as_view(), name='share-link'),
-]
-
 # 分享
 urlpatterns += [
     path('share-get', views.ShareGetView.as_view(), name='share-get'),
     path('share-create', views.ShareCreateView.as_view(), name='share-create'),
     path('share-update', views.ShareUpdateView.as_view(), name='share-update'),
     path('share-delete', views.ShareDelete.as_view(), name='history-delete'),
+    path('share/<str:signature>', views.ShareLinkView.as_view(), name='share-link'),
 ]
 
 # 文件
 urlpatterns += [
+    path('file-blob/<uuid:uuid>', views.FileBlobView.as_view(), name='file-blob'),
     path('file-delete', views.FileDeleteView.as_view(), name='file-delete'),
     path('file-upload', views.FileUploadView.as_view(), name='file-upload'),
     path('folder-upload', views.FolderUploadView.as_view(), name='folder-upload'),

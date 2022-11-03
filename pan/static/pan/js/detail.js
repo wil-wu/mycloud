@@ -7,37 +7,45 @@ $(document).ready(function () {
     let file
 
     $.get(ctx + '/api/file', {uuid: uuid}, function (res) {
-        file = res[0]
-        file.url = ctx + '/media/' + file.file_path
-    }).done(function () {
-        setInfo()
-        for (let key in _media) {
-            if (_media[key].indexOf(file.file_type) !== -1) {
-                if (file.file_size > _preview[key]) {
-                    $('#notPermission').removeClass('d-none').find('.btn-info').click(function () {
-                        location.href = ctx + '/download/' + file.file_uuid
-                    })
-                    return
-                } else {
-                    if (key === 'video') {
-                        info.find('#tip').text('由于服务器带宽，已禁止拖动进度条')
-                        videoPlayer()
-                        return
-                    } else if (key === 'audio') {
-                        info.find('#tip').text('由于服务器带宽，已禁止拖动进度条')
-                        audioPlayer()
-                        return
-                    } else if (key === 'image') {
-                        imageDisplay()
-                        return
-                    }
-                }
-            }
-        }
+        if (res.length !== 0) {
+            file = res[0]
+            file.type = file.file_type.substring(1)
+            setInfo()
 
-        $('#notSupport').removeClass('d-none').find('.btn-info').click(function () {
-            location.href = ctx + '/download/' + file.file_uuid
-        })
+            $.ajax(ctx + `/file-blob/${uuid}`, {
+                method: 'GET',
+                data: {blob: true},
+                xhrFields: {responseType: 'blob'},
+                success: function (res) {
+                    file.blobURL = URL.createObjectURL(new Blob([res]))
+                    for (let key in _media) {
+                        if (_media[key].indexOf(file.file_type) !== -1) {
+                            if (file.file_size > _preview[key]) {
+                                $('#notPermission').removeClass('d-none').find('.btn-info').click(function () {
+                                    location.href = ctx + '/file-blob/' + file.file_uuid
+                                })
+                                return
+                            } else {
+                                if (key === 'video') {
+                                    videoPlayer()
+                                    return
+                                } else if (key === 'audio') {
+                                    info.find('#tip').text('暂不支持拖动音频播放进度条')
+                                    audioPlayer()
+                                    return
+                                } else if (key === 'image') {
+                                    imageDisplay()
+                                    return
+                                }
+                            }
+                        }
+                    }
+                    $('#notSupport').removeClass('d-none').find('.btn-info').click(function () {
+                        location.href = ctx + '/file-blob/' + file.file_uuid
+                    })
+                }
+            })
+        }
     })
 
     // 视频播放
@@ -50,12 +58,10 @@ $(document).ready(function () {
             controls: true,
             language: 'zh-CN',
             sources: [{
-                src: file.url,
-                type: `video/${file.file_type.substring(1)}`,
+                src: file.blobURL,
+                type: `video/${file.type}`
             }]
         })
-
-        player.controlBar.progressControl.disable()
 
         player.on('error', function () {
             toast.setText('加载失败')
@@ -72,8 +78,9 @@ $(document).ready(function () {
         let progress = elem.find('#progress')
 
         let howl = new Howl({
-            src: file.url,
+            src: file.blobURL,
             volume: 0.3,
+            format: [file.type],
             onplay: function () {
                 requestAnimationFrame(step)
             },
@@ -143,7 +150,7 @@ $(document).ready(function () {
 
     // 图片
     function imageDisplay() {
-        $('#image').attr('src', file.url).parent().removeClass('d-none')
+        $('#image').attr('src', file.blobURL).parent().removeClass('d-none')
     }
 
     // 设置文件信息

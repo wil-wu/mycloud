@@ -9,7 +9,7 @@ class FileSerializer(ModelSerializer):
 
     class Meta:
         model = GenericFile
-        fields = ['id', 'file_name', 'file_uuid', 'file_cate', 'file_type', 'file_size', 'file_path', 'create_time']
+        fields = ['id', 'file_name', 'file_uuid', 'file_cate', 'file_type', 'file_size', 'create_time']
 
 
 class FileShareSerializer(ModelSerializer):

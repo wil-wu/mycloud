@@ -225,7 +225,7 @@ $(document).ready(function () {
                             toast.setIcon('fas fa-info-circle text-info')
                             toast.setText('正在打包请稍等')
                             toast.getToast().show()
-                            location.href = ctx + '/download/' + file.uuid
+                            location.href = ctx + '/file-blob/' + file.uuid
                         })
                     })
                     inputToggle.toggle('normal')
