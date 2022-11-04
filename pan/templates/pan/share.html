@@ -70,7 +70,7 @@
 
             elem.text(custom.fileSizeFormat(Number(elem.text())))
             btn.click(function () {
-                toast.setIcon('<i class="fas fa-info-circle text-info"></i>')
+                toast.setIcon('fas fa-info-circle text-info')
                 toast.setText('正在打包请稍等')
                 toast.getToast().show()
                 location.href = _urls.fileBlob('{{ file.file_uuid }}')
