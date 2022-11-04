@@ -73,7 +73,7 @@
                 toast.setIcon('<i class="fas fa-info-circle text-info"></i>')
                 toast.setText('正在打包请稍等')
                 toast.getToast().show()
-                location.href = ctx + '/download/' + '{{ file.file_uuid }}'
+                location.href = _urls.fileBlob('{{ file.file_uuid }}')
             })
         {% endif %}
     })

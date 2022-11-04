@@ -1,34 +1,82 @@
-const ctx = 'http://127.0.0.1:8000'
+(function (global, factory) {
+    const domain = 'http://127.0.0.1:8000'
 
-// const csrftoken = custom.getCookie('csrftoken')
+    global._config = factory(global.mdb)
+    global._domain = domain
+    global._urls = {
+        apiCloud: `${domain}/api/cloud`,
+        apiHistory: `${domain}/api/history`,
+        apiBin: `${domain}/api/bin`,
+        apiFile: `${domain}/api/file`,
+        apiFolder: `${domain}/api/folder`,
+        apiNotice: `${domain}/api/notice`,
+        login: `${domain}/login`,
+        register: `${domain}/register`,
+        reset: `${domain}/reset-password`,
+        fileUpload: `${domain}/file-upload`,
+        fileCreate: `${domain}/file-create`,
+        fileDelete: `${domain}/file-delete`,
+        fileTrash: `${domain}/file-trash`,
+        fileMove: `${domain}/file-move`,
+        folderUpload: `${domain}/folder-upload`,
+        dupCheck: `${domain}/duplicated-check`,
+        shareGet: `${domain}/share-get`,
+        shareCreate: `${domain}/share-create`,
+        shareUpdate: `${domain}/share-update`,
+        shareDelete: `${domain}/share-delete`,
+        avatar: `${domain}/alter-avatar`,
+        password: `${domain}/alter-password`,
+        info: `${domain}/alter-info`,
+        msgApprove: `${domain}/msg-appr`,
+        profile: `${domain}/profile`,
+        fileBlob: function (uuid) {
+            return `${domain}/file-blob/${uuid}`
+        },
+        detail: function (uuid) {
+            return `${domain}/detail?uuid=${uuid}`
+        },
+        share: function (signature) {
+            return `${domain}/share/${signature}`
+        },
+    }
 
-const _media = {
-    video: ['.mp4'],
-    audio: ['.mp3', '.wav'],
-    image: ['.jpg', '.png', '.svg', '.gif']
-}
+})(this, function (mdb) {
+    'use strict'
 
-const DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+    mdb.Toast.Default.delay = 2000
 
-const MAX_UPLOAD_FILE_SIZE = 251658240
+    const media = {
+        video: ['mp4', 'webm'],
+        audio: ['mp3', 'wav', 'ogg', 'opus', 'aac', 'm4a', 'm4b'],
+        image: ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif']
+    }
 
-const MAX_AVATAR_SIZE = 3145728
+    const DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
-const BREAK_POINT = 992
+    const MAX_UPLOAD_FILE_SIZE = 251658240
 
-mdb.Toast.Default.delay = 2000
+    const MAX_AVATAR_SIZE = 3145728
 
-// $.ajaxSetup({
-//     beforeSend: function (xhr) {
-//         xhr.setRequestHeader('X-CSRFToken', csrftoken)
-//     }
-// })
+    const BREAK_POINT = 992
 
-let _storage = Number(localStorage.getItem('storage'))
-let _used = Number(localStorage.getItem('used'))
+    const storage = Number(localStorage.getItem('storage'))
 
-let _preview = {
-    video: Number(localStorage.getItem('video')),
-    audio: Number(localStorage.getItem('audio')),
-    image: Number(localStorage.getItem('image'))
-}
+    const used = Number(localStorage.getItem('used'))
+
+    const preview = {
+        video: Number(localStorage.getItem('video')),
+        audio: Number(localStorage.getItem('audio')),
+        image: Number(localStorage.getItem('image'))
+    }
+
+    return {
+        media,
+        storage,
+        used,
+        preview,
+        DATA_UPLOAD_MAX_NUMBER_FIELDS,
+        MAX_UPLOAD_FILE_SIZE,
+        MAX_AVATAR_SIZE,
+        BREAK_POINT,
+    }
+})

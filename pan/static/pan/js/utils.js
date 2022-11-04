@@ -1,7 +1,7 @@
 (function (global, factory) {
-    global.custom = factory()
+    global.custom = factory(global.jQuery, global.mdb)
 
-})(this, function () {
+})(this, function ($, mdb) {
     'use strict'
 
     // 自定义toast
@@ -265,19 +265,19 @@
     }
 
     return {
-        Toast: Toast,
-        Alert: Alert,
-        Modal: Modal,
-        elEmpty:elEmpty,
-        isMobile:isMobile,
-        copyText: copyText,
-        BaseModal: BaseModal,
-        getCookie: getCookie,
-        getQueryParam: getQueryParam,
-        fileSizeFormat: fileSizeFormat,
-        humanizeTime: humanizeTime,
-        getInitial: getInitial,
-        setInitial: setInitial,
-        checkPassword: checkPassword,
+        Toast,
+        Alert,
+        Modal,
+        elEmpty,
+        isMobile,
+        copyText,
+        BaseModal,
+        getCookie,
+        getQueryParam,
+        fileSizeFormat,
+        humanizeTime,
+        getInitial,
+        setInitial,
+        checkPassword,
     }
 })

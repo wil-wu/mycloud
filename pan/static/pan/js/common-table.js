@@ -1,7 +1,7 @@
 (function (global, factory) {
-    global.table = factory()
+    global.table = factory(global.jQuery)
 
-})(this, function () {
+})(this, function ($) {
     'use strict'
 
     let icons = {
@@ -122,13 +122,13 @@
     }
 
     return {
-        icons: icons,
-        loadingTemplate: loadingTemplate,
-        fileNameFormatter: fileNameFormatter,
-        fileTypeFormatter: fileTypeFormatter,
-        tableSort: tableSort,
-        tableOrder: tableOrder,
-        tableSearch: tableSearch,
-        alterCallback: alterCallback,
+        icons,
+        loadingTemplate,
+        fileNameFormatter,
+        fileTypeFormatter,
+        tableSort,
+        tableOrder,
+        tableSearch,
+        alterCallback,
     }
 })

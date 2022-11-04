@@ -43,7 +43,7 @@ $(document).ready(function () {
             loginInputs.removeClass('is-invalid')
             let formData = $loginForm.serialize()
 
-            $.post(ctx + '/login', formData, function (res) {
+            $.post(_urls.login, formData, function (res) {
                 if (res.code === 200) {
                     $.each(res.data, function (key, value) {
                         localStorage.setItem(key, value)
@@ -59,9 +59,9 @@ $(document).ready(function () {
                         done: function () {
                             setTimeout(function () {
                                 if (next) {
-                                    location.replace(ctx + next)
+                                    location.replace(_domain + next)
                                 } else {
-                                    location.replace(ctx)
+                                    location.replace(_domain)
                                 }
                             }, 400)
                         }
@@ -96,7 +96,7 @@ $(document).ready(function () {
             if (custom.checkPassword($('#registerPassword'), $('#confirmPassword'))) {
                 let formData = $registerForm.serialize()
 
-                $.post(ctx + '/register', formData, function (res) {
+                $.post(_urls.register, formData, function (res) {
                     if (res.code === 200) {
                         $('html').animate({
                             scrollTop: loginBlock.offset().top - 48,
@@ -137,7 +137,7 @@ $(document).ready(function () {
             resetInputs.removeClass('is-invalid')
             let formData = $resetForm.serialize()
 
-            $.post(ctx + '/reset-password', formData, function (res) {
+            $.post(_urls.reset, formData, function (res) {
                 if (res.code === 200) {
                     let age = 60
                     let timer = setInterval(function () {
@@ -212,7 +212,7 @@ $(document).ready(function () {
     // 获取分享文件
     $('#shareKey').on('input', function () {
         if (this.value.length === 6) {
-            $.post(ctx + '/share-get', {key: this.value}, function (res) {
+            $.post(_urls.shareGet, {key: this.value}, function (res) {
                 if (res.code === 200) {
                     let file = res.data.file
                     let share = res.data.share
@@ -225,7 +225,7 @@ $(document).ready(function () {
                             toast.setIcon('fas fa-info-circle text-info')
                             toast.setText('正在打包请稍等')
                             toast.getToast().show()
-                            location.href = ctx + '/file-blob/' + file.uuid
+                            location.href = _urls.fileBlob(file.uuid)
                         })
                     })
                     inputToggle.toggle('normal')

@@ -7,7 +7,7 @@ $(document).ready(function () {
     let modal = new custom.Modal($('#modal'))
 
     binTable.bootstrapTable({
-        url: ctx + '/api/bin',
+        url: _urls.apiBin,
         dataField: 'results',
         totalField: 'count',
         sidePagination: 'server',
@@ -62,12 +62,12 @@ $(document).ready(function () {
 
             function del() {
                 let uuids = checks.map(item => item.file_uuid)
-                let use = _used - checks.map(item => item.file_size).reduce((prev, curr) => prev + curr)
+                let use = _config.used - checks.map(item => item.file_size).reduce((prev, curr) => prev + curr)
 
-                table.alterCallback(ctx + '/file-delete', {uuids: uuids}, toast, binTable).done(function () {
+                table.alterCallback(_urls.fileDelete, {uuids: uuids}, toast, binTable).done(function () {
                     $('#used').text(custom.fileSizeFormat(use))
-                    _used = use
-                    localStorage.setItem('used', _used)
+                    _config.used = use
+                    localStorage.setItem('used', use)
                 })
                 modal.getModal().hide()
             }
@@ -95,7 +95,7 @@ $(document).ready(function () {
             function recycle() {
                 let uuids = checks.map(item => item.file_uuid)
 
-                table.alterCallback(ctx + '/trash', {method: 'recycle', uuids: uuids}, toast, binTable)
+                table.alterCallback(_urls.fileTrash, {method: 'recycle', uuids: uuids}, toast, binTable)
                 modal.getModal().hide()
             }
 
@@ -149,7 +149,7 @@ $(document).ready(function () {
      */
 
     function fileRecycle(uuid) {
-        table.alterCallback(ctx + '/trash', {method: 'recycle', uuids: [uuid]}, toast, binTable)
+        table.alterCallback(_urls.fileTrash, {method: 'recycle', uuids: [uuid]}, toast, binTable)
     }
 
     function fileDel(uuid, size) {
@@ -157,12 +157,12 @@ $(document).ready(function () {
         modal.setBtnType("btn btn-danger")
 
         function del() {
-            let use = _used - size
+            let use = _config.used - size
 
-            table.alterCallback(ctx + '/file-delete', {uuids: [uuid]}, toast, binTable).done(function () {
+            table.alterCallback(_urls.fileDelete, {uuids: [uuid]}, toast, binTable).done(function () {
                 $('#used').text(custom.fileSizeFormat(use))
-                _used = use
-                localStorage.setItem('used', _used)
+                _config.used = use
+                localStorage.setItem('used', use)
             })
             modal.getModal().hide()
         }

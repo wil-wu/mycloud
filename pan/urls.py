@@ -30,10 +30,10 @@ urlpatterns += [
     path('file-blob/<uuid:uuid>', views.FileBlobView.as_view(), name='file-blob'),
     path('file-delete', views.FileDeleteView.as_view(), name='file-delete'),
     path('file-upload', views.FileUploadView.as_view(), name='file-upload'),
+    path('file-trash', views.FileTrashView.as_view(), name='file-trash'),
+    path('file-move', views.FileMoveView.as_view(), name='file-move'),
     path('folder-upload', views.FolderUploadView.as_view(), name='folder-upload'),
     path('duplicated-check', views.DuplicatedCheck.as_view(), name='duplicated-check'),
-    path('trash', views.FileTrashView.as_view(), name='trash'),
-    path('move', views.FileMoveView.as_view(), name='move'),
 ]
 
 # 验证

@@ -6,16 +6,16 @@ $(document).ready(function () {
     let storage = $('#memory')
     let notice = $('#notice')
     let contents = notice.next()
-    let pagination = { offset: 0, limit: 5 }
+    let pagination = {offset: 0, limit: 5}
 
-    window.innerWidth >= BREAK_POINT ? sidebar.show() : sidebar.hide()
+    window.innerWidth >= _config.BREAK_POINT ? sidebar.show() : sidebar.hide()
 
     $(window).on('resize', function () {
-        window.innerWidth > BREAK_POINT ? sidebar.show() : sidebar.hide()
+        window.innerWidth > _config.BREAK_POINT ? sidebar.show() : sidebar.hide()
     })
 
-    storage.find('#storage').text(custom.fileSizeFormat(_storage))
-    storage.find('#used').text(custom.fileSizeFormat(_used))
+    storage.find('#storage').text(custom.fileSizeFormat(_config.storage))
+    storage.find('#used').text(custom.fileSizeFormat(_config.used))
 
     function insertNotices(data) {
         let view = ''
@@ -39,7 +39,7 @@ $(document).ready(function () {
     }
 
     notice.one('show.mdb.dropdown', function () {
-        $.get(ctx + '/api/notice', pagination, function (res) {
+        $.get(_urls.apiNotice, pagination, function (res) {
             insertNotices(res.results)
         })
     })
@@ -48,7 +48,7 @@ $(document).ready(function () {
         if (this.scrollTop + this.clientHeight >= this.scrollHeight) {
             pagination.offset += pagination.limit
             pagination.limit += pagination.limit
-            $.get(ctx + '/api/notice', pagination, function (res) {
+            $.get(_urls.apiNotice, pagination, function (res) {
                 insertNotices(res.results)
                 if (res.results.length === 0) {
                     contents.off('scroll')

@@ -13,7 +13,7 @@ $(document).ready(function () {
     })
 
     historyTable.bootstrapTable({
-        url: ctx + '/api/history',
+        url: _urls.apiHistory,
         dataField: 'results',
         totalField: 'count',
         sidePagination: 'server',
@@ -67,7 +67,7 @@ $(document).ready(function () {
                 let ids = checks.map(function (item) {
                     return item.id
                 })
-                table.alterCallback(ctx + '/share-delete', {ids: ids}, toast, historyTable)
+                table.alterCallback(_urls.shareDelete, {ids: ids}, toast, historyTable)
                 modal.getModal().hide()
             }
 
@@ -136,9 +136,9 @@ $(document).ready(function () {
      */
     function linkCopy(index) {
         let data = historyTable.bootstrapTable('getData', {includeHiddenRows: true})[index]
-        custom.copyText('文件: ' + data.user_file +
-            ' 口令分享: ' + data.secret_key + '\n' +
-            ' 链接分享: ' + ctx + '/share/' + data.signature, alert)
+        custom.copyText(`文件: ${data.user_file}\n` +
+            `口令分享: ${data.secret_key}\n` +
+            `链接分享: ${_urls.share(data.signature)}`, alert)
     }
 
     function shareDel(id) {
@@ -146,7 +146,7 @@ $(document).ready(function () {
         modal.setBtnType("btn btn-danger")
 
         function del() {
-            table.alterCallback(ctx + '/share-delete', {ids: [id]}, toast, historyTable)
+            table.alterCallback(_urls.shareDelete, {ids: [id]}, toast, historyTable)
             modal.getModal().hide()
         }
 
@@ -171,7 +171,7 @@ $(document).ready(function () {
         let summaryChange = false
 
         // 获取填充密匙
-        $elem.find('#shareLink').text(ctx + '/share/' + data.signature)
+        $elem.find('#shareLink').text(_urls.share(data.signature))
         $elem.find('#shareKey').text(data.secret_key)
 
         $elem.one('show.mdb.modal', function () {
@@ -179,9 +179,9 @@ $(document).ready(function () {
                 custom.copyText(this.previousElementSibling.textContent, alert)
             })
             $copyBtn.on('click', function () {
-                custom.copyText('文件: ' + data.user_file + '\n' +
-                                     '口令分享: ' + data.secret_key + '\n' +
-                                     '链接分享: ' + ctx + '/share/' + data.signature, alert)
+                custom.copyText(`文件: ${data.user_file}\n` +
+                    `口令分享: ${data.secret_key}\n` +
+                    `链接分享: ${_urls.share(data.signature)}`, alert)
             })
             $deltas.on('click', function () {
                 deltaChange = true
@@ -196,7 +196,7 @@ $(document).ready(function () {
             $deltas.off('click')
             $summary.off('change')
             if (deltaChange || summaryChange) {
-                table.alterCallback(ctx + '/share-update', {
+                table.alterCallback(_urls.shareUpdate, {
                     id: data.id,
                     delta: deltaChange ? $delta.data('customDelta') : undefined,
                     summary: summaryChange ? $summary.val() : undefined

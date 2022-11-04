@@ -6,20 +6,20 @@ $(document).ready(function () {
     let info = $('#info')
     let file
 
-    $.get(ctx + '/api/file', {uuid: uuid}, function (res) {
+    $.get(_urls.apiFile, {uuid: uuid}, function (res) {
         if (res.length !== 0) {
             file = res[0]
             file.type = file.file_type.substring(1)
             setInfo()
 
-            for (let key in _media) {
-                if (_media[key].indexOf(file.file_type) !== -1) {
-                    if (file.file_size > _preview[key]) {
+            for (const [key, formats] of Object.entries(_config.media)) {
+                if (formats.indexOf(file.type) !== -1) {
+                    if (file.file_size > _config.preview[key]) {
                         $('#notPermission').removeClass('d-none').find('.btn-info').click(function () {
-                            location.href = ctx + '/file-blob/' + file.file_uuid
+                            location.href = _urls.fileBlob(uuid)
                         })
                     } else {
-                        $.ajax(ctx + `/file-blob/${uuid}`, {
+                        $.ajax(_urls.fileBlob(uuid), {
                             method: 'GET',
                             data: {blob: true},
                             xhrFields: {responseType: 'blob'},
@@ -28,8 +28,8 @@ $(document).ready(function () {
                                 toast.setIcon('fas fa-info-circle text-info')
                                 toast.getToast().show()
                             },
-                            success: function (res) {
-                                file.blobURL = URL.createObjectURL(new Blob([res]))
+                            success: function (blob) {
+                                file.blobURL = URL.createObjectURL(blob)
                                 switch (key) {
                                     case "video":
                                         videoPlayer()
@@ -52,7 +52,7 @@ $(document).ready(function () {
                 }
             }
             $('#notSupport').removeClass('d-none').find('.btn-info').click(function () {
-                location.href = ctx + '/file-blob/' + file.file_uuid
+                location.href = _urls.fileBlob(uuid)
             })
         }
     })
@@ -165,7 +165,7 @@ $(document).ready(function () {
     // 设置文件信息
     function setInfo() {
         info.find('p:nth-child(1)').append(file.file_name)
-        info.find('p:nth-child(2)').append(file.file_type)
+        info.find('p:nth-child(2)').append(file.type)
         info.find('p:nth-child(3)').append(custom.fileSizeFormat(file.file_size))
         info.find('p:nth-child(4)').append(file.create_time)
     }

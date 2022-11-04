@@ -19,7 +19,7 @@ $(document).ready(function () {
     })
 
     cloudTable.bootstrapTable({
-        url: ctx + '/api/cloud',
+        url: _urls.apiCloud,
         classes: 'table table-hover',
         toolbar: '#toolbar',
         clickToSelect: true,
@@ -136,7 +136,7 @@ $(document).ready(function () {
                     return item.file_uuid
                 })
 
-                table.alterCallback(ctx + '/trash', {
+                table.alterCallback(_urls.fileTrash, {
                     method: 'trash',
                     uuids: uuids
                 }, toast, cloudTable, folderUUID === '' ? undefined : folderUUID)
@@ -171,7 +171,7 @@ $(document).ready(function () {
                 addCrumb(row.file_name, row.file_uuid)
                 cloudTable.bootstrapTable('refresh', {query: {folderUUID: row.file_uuid}})
             } else {
-                location.href = ctx + `/detail?uuid=${row.file_uuid}`
+                location.href = _urls.detail(row.file_uuid)
             }
         }
     })
@@ -276,7 +276,7 @@ $(document).ready(function () {
                 addCrumb(elem.data('customName'), elem.data('customUuid'))
                 cloudTable.bootstrapTable('refresh', {query: {folderUUID: elem.data('customUuid')}})
             } else {
-                location.href = ctx + `/detail?uuid=${elem.data('customUuid')}`
+                location.href = _urls.detail(elem.data('customUuid'))
             }
         }
 
@@ -288,7 +288,9 @@ $(document).ready(function () {
             })
         } else {
             cards.on('touchstart', function () {
-                timer = setTimeout(function () { press = true }, duration)
+                timer = setTimeout(function () {
+                    press = true
+                }, duration)
             }).on('touchmove', function () {
                 silent = false
             }).on('touchend', function () {
@@ -356,7 +358,7 @@ $(document).ready(function () {
                 $(this).toggleClass('selected').siblings('.selected').removeClass('selected')
             }).appendTo(group)
         }
-        $.get(ctx + '/api/folder', {format: 'json', folderUUID: folderUUID, exclude: exclude}, function (res) {
+        $.get(_urls.apiFolder, {format: 'json', folderUUID: folderUUID, exclude: exclude}, function (res) {
             res.forEach((value) => {
                 $(`<li class="list-group-item list-group-item-choice" data-custom-uuid="${value.file_uuid}">
                        <i class="fas fa-folder me-2"></i>${value.file_name}
@@ -411,9 +413,9 @@ $(document).ready(function () {
 
         let isChange = false
         // 获取填充密匙
-        $.post(ctx + '/share-create', {uuid: uuid}, function (res) {
+        $.post(_urls.shareCreate, {uuid: uuid}, function (res) {
             $elem.data('customId', res.data.id)
-            $elem.find('#shareLink').text(ctx + '/share/' + res.data.signature)
+            $elem.find('#shareLink').text(_urls.share(res.data.signature))
             $elem.find('#shareKey').text(res.data.key)
         })
 
@@ -422,12 +424,12 @@ $(document).ready(function () {
                 custom.copyText(this.previousElementSibling.textContent, alert)
             })
             $copyBtn.on('click', function () {
-                custom.copyText('口令分享: ' + $elem.find('#shareKey').text() + '\n' +
-                    '链接分享: ' + ctx + '/share/' + $elem.find('#shareLink').text(), alert)
+                custom.copyText(`口令分享: ${$elem.find('#shareKey').text()}\n` +
+                    `链接分享: ${_urls.share($elem.find('#shareLink').text())}`, alert)
             })
             $deltas.on('click', function () {
                 isChange = true
-                $delta.data('customDelta', this.dataset.customDelta).text(this.textContent)
+                $delta.data('customDelta', Number(this.dataset.customDelta)).text(this.textContent)
             })
             $summary.on('change', function () {
                 isChange = true
@@ -438,9 +440,9 @@ $(document).ready(function () {
             $deltas.off('click')
             $summary.off('change')
             if (isChange) {
-                table.alterCallback(ctx + '/share-update', {
+                table.alterCallback(_urls.shareUpdate, {
                     id: $elem.data('customId'),
-                    delta: $delta.data('customDelta'),
+                    delta: Number($delta.data('customDelta')),
                     summary: $summary.val()
                 }, toast, cloudTable)
             }
@@ -450,7 +452,7 @@ $(document).ready(function () {
 
     function fileTrash(uuid) {
         let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
-        table.alterCallback(ctx + '/trash', {
+        table.alterCallback(_urls.fileTrash, {
             method: 'trash',
             uuids: [uuid]
         }, toast, cloudTable, folderUUID === '' ? undefined : folderUUID)
@@ -460,7 +462,7 @@ $(document).ready(function () {
         toast.setIcon('fas fa-info-circle text-info')
         toast.setText('正在打包请稍等')
         toast.getToast().show()
-        location.href = ctx + `/file-blob/${uuid}`
+        location.href = _urls.fileBlob(uuid)
     }
 
     function fileMove(uuid) {
@@ -475,7 +477,7 @@ $(document).ready(function () {
         function moveFile() {
             let folderUUID = stackNav[stackNav.length - 1].data('customUuid')
             let dst = elem.find('.selected').data('customUuid')
-            table.alterCallback(ctx + '/move', {
+            table.alterCallback(_urls.fileMove, {
                 src: uuid, dst: dst === undefined || '' ? stackFolder[stackFolder.length - 1] : dst
             }, toast, cloudTable, folderUUID === '' ? undefined : folderUUID)
 
@@ -492,15 +494,15 @@ $(document).ready(function () {
 
     function fileUpload() {
         let size = this.files[0].size
-        let use = size + _used
+        let use = size + _config.used
 
-        if (use > _storage) {
+        if (use > _config.storage) {
             toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText('剩余空间不足')
             toast.getToast().show()
-        } else if (size > MAX_UPLOAD_FILE_SIZE) {
+        } else if (size > _config.MAX_UPLOAD_FILE_SIZE) {
             toast.setIcon('fas fa-exclamation-circle text-warning')
-            toast.setText(`单次上传不能超过${custom.fileSizeFormat(MAX_UPLOAD_FILE_SIZE)}`)
+            toast.setText(`单次上传不能超过${custom.fileSizeFormat(_config.MAX_UPLOAD_FILE_SIZE)}`)
             toast.getToast().show()
         } else {
             let formData = new FormData()
@@ -514,7 +516,7 @@ $(document).ready(function () {
             }
             formData.append("file", this.files[0])
 
-            uploadCallback(uploadName, ctx + '/file-upload', formData, use, folderUUID)
+            uploadCallback(uploadName, _urls.fileUpload, formData, use, folderUUID)
         }
         this.value = ''
     }
@@ -526,19 +528,19 @@ $(document).ready(function () {
             size += value.size
             upload_nums += 2
         })
-        let use = size + _used
+        let use = size + _config.used
 
-        if (use > _storage) {
+        if (use > _config.storage) {
             toast.setIcon('fas fa-exclamation-circle text-warning')
             toast.setText('剩余空间不足')
             toast.getToast().show()
-        } else if (use > MAX_UPLOAD_FILE_SIZE) {
+        } else if (use > _config.MAX_UPLOAD_FILE_SIZE) {
             toast.setIcon('fas fa-exclamation-circle text-warning')
-            toast.setText(`单次上传不能超过${custom.fileSizeFormat(MAX_UPLOAD_FILE_SIZE)}`)
+            toast.setText(`单次上传不能超过${custom.fileSizeFormat(_config.MAX_UPLOAD_FILE_SIZE)}`)
             toast.getToast().show()
-        } else if (upload_nums > DATA_UPLOAD_MAX_NUMBER_FIELDS) {
+        } else if (upload_nums > _config.DATA_UPLOAD_MAX_NUMBER_FIELDS) {
             toast.setIcon('fas fa-exclamation-circle text-warning')
-            toast.setText(`上传条目数超过${DATA_UPLOAD_MAX_NUMBER_FIELDS}限制`)
+            toast.setText(`上传条目数超过${_config.DATA_UPLOAD_MAX_NUMBER_FIELDS}限制`)
             toast.getToast().show()
         } else {
             let formData = new FormData()
@@ -556,14 +558,14 @@ $(document).ready(function () {
                 formData.append('paths', file.webkitRelativePath)
             })
 
-            uploadCallback(uploadName, ctx + '/folder-upload', formData, use, folderUUID)
+            uploadCallback(uploadName, _urls.folderUpload, formData, use, folderUUID)
         }
         this.value = ''
     }
 
     // 重名检查
     function uploadCallback(name, url, data, use, uuid) {
-        $.getJSON(ctx + '/duplicated-check', {uploadName: name, folderUUID: uuid}, function (res) {
+        $.getJSON(_urls.dupCheck, {uploadName: name, folderUUID: uuid}, function (res) {
             if (res.code === 200) {
                 _uploadBinary(url, data, use, uuid)
             } else {
@@ -590,7 +592,9 @@ $(document).ready(function () {
             processData: false,
             beforeSend: function () {
                 $btn.prop('disabled', true)
-                $(window).on('beforeunload', function () { return '' })
+                $(window).on('beforeunload', function () {
+                    return ''
+                })
             },
             complete: function () {
                 $btn.prop('disabled', false)
@@ -641,7 +645,7 @@ $(document).ready(function () {
                     $('#used').text(custom.fileSizeFormat(use))
                     toast.setIcon('fas fa-check-circle text-success')
                     cloudTable.bootstrapTable('refresh', {query: {folderUUID: uuid}})
-                    _used = use
+                    _config.used = use
                     localStorage.setItem('used', use)
                 } else {
                     toast.setIcon('fas fa-exclamation-circle text-warning')
