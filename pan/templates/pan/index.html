@@ -69,7 +69,8 @@
                     <a class="nav-link px-2 dropdown-toggle d-flex align-items-center hidden-arrow" href=""
                        id="navbarDropdownProfile"
                        role="button" data-mdb-toggle="dropdown">
-                        <img class="rounded-circle" src="{{ user.profile.avatar.url }}" height="25" width="25" alt="avatar">
+                        <img class="rounded-circle" src="{{ user.profile.avatar.url }}" height="25" width="25"
+                             alt="avatar">
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
@@ -129,12 +130,14 @@
                             <div id="inputToggle" style="display: none;">
                                 <div class="form-outline form-white">
                                     <i id="closeIcon" class="fs-5 fas fa-times trailing"></i>
-                                    <input type="text" id="shareKey" class="form-control form-control-lg form-icon-trailing"
+                                    <input type="text" id="shareKey"
+                                           class="form-control form-control-lg form-icon-trailing"
                                            maxlength="6" autocomplete="off"/>
                                     <label class="form-label" for="shareKey">输入 6 位口令</label>
                                 </div>
                             </div>
-                        </div>{# 接收文件 #}
+                        </div>
+                        {# 接收文件 #}
                     </div>
                 </div>
             </div>
@@ -157,138 +160,144 @@
     </div>
 </header>
 {% if not user.is_authenticated %}
-<main class="mt-5">
-    <div class="container">
-        <section class="mb-5" id="loginBlock">
-            <div class="row">
-                <div class="col-md-6 mb-4">
-                    <div class="bg-image hover-overlay ripple shadow-2-strong rounded-5" data-mdb-ripple-color="light">
-                        <img src="{% static 'pan/image/coffee.jpg' %}" class="img-fluid" alt=""/>
+    <main class="mt-5">
+        <div class="container">
+            <section class="mb-5" id="loginBlock">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="bg-image hover-overlay ripple shadow-2-strong rounded-5"
+                             data-mdb-ripple-color="light">
+                            <img src="{% static 'pan/image/coffee.jpg' %}" class="img-fluid" alt=""/>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-6">
-                    <h4 class="mb-5 text-center"><strong>登录</strong></h4>
-                    <div class="row d-flex justify-content-center">
-                        <div class="col-md-6">
-                            <form class="row gy-4 needs-validation" id="loginForm" novalidate>
-                                <div class="col-12">
-                                    <div class="form-outline">
-                                        <input type="text" id="username" name="username" class="form-control"
-                                               maxlength="150" pattern="^[\w.@+-_]+$" required/>
-                                        <label class="form-label" for="username">用户名</label>
-                                        <div class="invalid-feedback">
-                                            长度小于150；特殊字符'@'、'.'、'-'、'_'、'+'
+                    <div class="col-md-6">
+                        <h4 class="mb-5 text-center"><strong>登录</strong></h4>
+                        <div class="row d-flex justify-content-center">
+                            <div class="col-md-6">
+                                <form class="row gy-4 needs-validation" id="loginForm" novalidate>
+                                    <div class="col-12">
+                                        <div class="form-outline">
+                                            <input type="text" id="username" name="username" class="form-control"
+                                                   maxlength="150" pattern="^[\w.@+-_]+$" required/>
+                                            <label class="form-label" for="username">用户名</label>
+                                            <div class="invalid-feedback">
+                                                长度小于150；特殊字符'@'、'.'、'-'、'_'、'+'
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-outline">
-                                        <input type="password" id="password" name="password" class="form-control"
-                                               minlength="6" maxlength="128" required/>
-                                        <label class="form-label" for="password">密码</label>
-                                        <div class="invalid-feedback">
-                                            长度大于6小于128
+                                    <div class="col-12">
+                                        <div class="form-outline">
+                                            <input type="password" id="password" name="password" class="form-control"
+                                                   minlength="6" maxlength="128" required/>
+                                            <label class="form-label" for="password">密码</label>
+                                            <div class="invalid-feedback">
+                                                长度大于6小于128
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-12 d-flex justify-content-between">
-                                    <div class="form-check">
-                                        <input class="form-check-input me-2" id="remember" name="remember"
-                                               type="checkbox" checked/>
-                                        <label class="form-check-label" for="remember">记住我</label>
+                                    <div class="col-12 d-flex justify-content-between">
+                                        <div class="form-check">
+                                            <input class="form-check-input me-2" id="remember" name="remember"
+                                                   type="checkbox" checked/>
+                                            <label class="form-check-label" for="remember">记住我</label>
+                                        </div>
+                                        <div>
+                                            <a href="javascript:void(0)" data-mdb-toggle="modal"
+                                               data-mdb-target="#resetModal">忘记密码？</a>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <a href="javascript:void(0)" data-mdb-toggle="modal" data-mdb-target="#resetModal">忘记密码？</a>
+                                    <div class="col-12">
+                                        <button type="button" class="btn btn-primary btn-block" id="loginBtn">登录
+                                        </button>
                                     </div>
-                                </div>
-                                <div class="col-12">
-                                    <button type="button" class="btn btn-primary btn-block" id="loginBtn">登录</button>
-                                </div>
-                            </form>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </section>
-        <hr class="my-5">
-        <section class="mb-5" id="registerBlock">
-            <div class="row">
-                <div class="col-md-6 order-md-1 order-2">
-                    <h4 class="mb-5 text-center"><strong>注册</strong></h4>
-                    <div class="row d-flex justify-content-center">
-                        <div class="col-md-6">
-                            <form class="row gy-4 needs-validation" id="registerForm" novalidate>
-                                <div class="col-12">
-                                    <div class="form-outline">
-                                        <input type="text" id="registerUsername" name="username" class="form-control"
-                                               maxlength="150" pattern="^[\w.@+-_]+$" required/>
-                                        <label class="form-label" for="registerUsername">用户名</label>
-                                        <div class="invalid-feedback">
-                                            长度小于150；特殊字符'@'、'.'、'-'、'_'、'+'
+            </section>
+            <hr class="my-5">
+            <section class="mb-5" id="registerBlock">
+                <div class="row">
+                    <div class="col-md-6 order-md-1 order-2">
+                        <h4 class="mb-5 text-center"><strong>注册</strong></h4>
+                        <div class="row d-flex justify-content-center">
+                            <div class="col-md-6">
+                                <form class="row gy-4 needs-validation" id="registerForm" novalidate>
+                                    <div class="col-12">
+                                        <div class="form-outline">
+                                            <input type="text" id="registerUsername" name="username"
+                                                   class="form-control"
+                                                   maxlength="150" pattern="^[\w.@+-_]+$" required/>
+                                            <label class="form-label" for="registerUsername">用户名</label>
+                                            <div class="invalid-feedback">
+                                                长度小于150；特殊字符'@'、'.'、'-'、'_'、'+'
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-outline">
-                                        <input type="password" id="registerPassword" name="password"
-                                               class="form-control" minlength="6" maxlength="128" required/>
-                                        <label class="form-label" for="registerPassword">密码</label>
-                                        <div class="invalid-feedback">
-                                            必填；长度大于6小于128
+                                    <div class="col-12">
+                                        <div class="form-outline">
+                                            <input type="password" id="registerPassword" name="password"
+                                                   class="form-control" minlength="6" maxlength="128" required/>
+                                            <label class="form-label" for="registerPassword">密码</label>
+                                            <div class="invalid-feedback">
+                                                必填；长度大于6小于128
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-12">
-                                    <div class="form-outline">
-                                        <input type="password" id="confirmPassword" name="confirmPassword"
-                                               class="form-control" minlength="6" maxlength="128" required/>
-                                        <label class="form-label" for="confirmPassword">确认密码</label>
-                                        <div class="invalid-feedback">
-                                            必填；长度大于6小于128
+                                    <div class="col-12">
+                                        <div class="form-outline">
+                                            <input type="password" id="confirmPassword" name="confirmPassword"
+                                                   class="form-control" minlength="6" maxlength="128" required/>
+                                            <label class="form-label" for="confirmPassword">确认密码</label>
+                                            <div class="invalid-feedback">
+                                                必填；长度大于6小于128
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="col-12">
-                                    <button type="button" class="btn btn-primary btn-block" id="registerBtn">注册</button>
-                                </div>
-                            </form>
+                                    <div class="col-12">
+                                        <button type="button" class="btn btn-primary btn-block" id="registerBtn">注册
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-4 order-md-2 order-1">
+                        <div class="bg-image hover-overlay ripple shadow-2-strong rounded-5"
+                             data-mdb-ripple-color="light">
+                            <img src="{% static 'pan/image/nature.jpg' %}" class="img-fluid" alt=""/>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6 mb-4 order-md-2 order-1">
-                    <div class="bg-image hover-overlay ripple shadow-2-strong rounded-5" data-mdb-ripple-color="light">
-                        <img src="{% static 'pan/image/nature.jpg' %}" class="img-fluid" alt=""/>
-                    </div>
+            </section>
+        </div>
+    </main>
+    <div class="modal fade" id="resetModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">重置密码</h5>
+                    <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
                 </div>
-            </div>
-        </section>
-    </div>
-</main>
-<div class="modal fade" id="resetModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">重置密码</h5>
-                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>填写用户名，我会给该用户绑定的邮箱发送一个验证邮件</p>
-                <p class="text-muted small">注：收不到邮件请检查网络和邮箱的pop3/smtp服务是否开启</p>
-                <form id="resetForm" novalidate>
-                    <div class="form-outline">
-                        <input class="form-control" id="resetName" name="resetName" required>
-                        <label class="form-label" for="resetName">用户名</label>
-                        <div class="invalid-feedback">请输入验证信息</div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" id="resetBtn">确认</button>
+                <div class="modal-body">
+                    <p>填写用户名，我会给该用户绑定的邮箱发送一个验证邮件</p>
+                    <p class="text-muted small">注：收不到邮件请检查网络和邮箱的pop3/smtp服务是否开启</p>
+                    <form id="resetForm" novalidate>
+                        <div class="form-outline">
+                            <input class="form-control" id="resetName" name="resetName" required>
+                            <label class="form-label" for="resetName">用户名</label>
+                            <div class="invalid-feedback">请输入验证信息</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" id="resetBtn">确认</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 {% endif %}
 <!-- 验证通知 -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">

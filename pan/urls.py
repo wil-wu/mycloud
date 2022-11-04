@@ -3,7 +3,6 @@ from rest_framework.routers import DefaultRouter
 
 from pan import views
 
-
 app_name = 'pan'
 
 # 主要页面
@@ -52,7 +51,6 @@ urlpatterns += [
     path('alter-info', views.AlterInfoView.as_view(), name='alter-info'),
     path('msg-appr', views.MsgApprView.as_view(), name='message'),
 ]
-
 
 # restful api
 router = DefaultRouter(trailing_slash=False)

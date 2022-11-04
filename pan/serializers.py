@@ -23,7 +23,6 @@ class FileShareSerializer(ModelSerializer):
 
 
 class FolderSerializer(ModelSerializer):
-
     class Meta:
         model = GenericFile
         fields = ['file_name', 'file_uuid']

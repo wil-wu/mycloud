@@ -75,6 +75,7 @@ class AjaxObj(dict):
     """
     自定义ajax object
     """
+
     def __init__(self, code=200, msg='', data=None):
         if data is None:
             data = {}

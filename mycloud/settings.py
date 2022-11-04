@@ -27,14 +27,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
 EMAIL_HOST = 'smtp.qq.com'
 EMAIL_PORT = '587'
 EMAIL_HOST_USER = '******'
 EMAIL_HOST_PASSWORD = '******'
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
-
 
 # Application definition
 
@@ -51,7 +49,6 @@ INSTALLED_APPS = [
     'rest_framework',
     # 'debug_toolbar',
 ]
-
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

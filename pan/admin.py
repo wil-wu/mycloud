@@ -202,11 +202,11 @@ class UserFileAdmin(admin.ModelAdmin):
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
-    autocomplete_fields = ('folder', )
+    autocomplete_fields = ('folder',)
     search_fields = ('file_name', 'create_by__username')
     readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
     actions = [make_removed, make_recycle]
-    list_select_related = ('create_by', )
+    list_select_related = ('create_by',)
     list_display = ('file_name', 'file_type', 'file_size', 'del_flag', 'create_by')
     list_filter = ('file_type', 'del_flag')
     list_per_page = 10
@@ -239,7 +239,7 @@ class UserDirAdmin(admin.ModelAdmin):
     actions = [make_removed, make_recycle]
     list_select_related = ('create_by',)
     list_display = ('file_name', 'file_size', 'del_flag', 'create_by')
-    list_filter = ('del_flag', )
+    list_filter = ('del_flag',)
     list_per_page = 10
 
     def has_add_permission(self, request):

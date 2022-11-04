@@ -8,14 +8,14 @@
     <title>异常</title>
 </head>
 <body class="h-100">
-    <div class="d-flex justify-content-center align-items-center h-100">
-        <header class="text-center">
-            <div class="mb-3">
-                <h1 class="display-1">{% block code %}{% endblock %}</h1>
-            </div>
-            <div class="small mb-3">{% block text %}{% endblock %}</div>
-            <a class="btn btn-dark btn-lg mb-1" href="{% url 'pan:index' %}">返回主页</a>
-        </header>
-    </div>
+<div class="d-flex justify-content-center align-items-center h-100">
+    <header class="text-center">
+        <div class="mb-3">
+            <h1 class="display-1">{% block code %}{% endblock %}</h1>
+        </div>
+        <div class="small mb-3">{% block text %}{% endblock %}</div>
+        <a class="btn btn-dark btn-lg mb-1" href="{% url 'pan:index' %}">返回主页</a>
+    </header>
+</div>
 </body>
 </html>
