@@ -185,7 +185,7 @@ $(document).ready(function () {
             })
             $deltas.on('click', function () {
                 deltaChange = true
-                $delta.data('customDelta', this.dataset.customDelta).text(this.textContent)
+                $delta.data('customDelta', Number(this.dataset.customDelta)).text(this.textContent)
             })
             $summary.on('change', function () {
                 summaryChange = true
@@ -198,7 +198,7 @@ $(document).ready(function () {
             if (deltaChange || summaryChange) {
                 table.alterCallback(_urls.shareUpdate, {
                     id: data.id,
-                    delta: deltaChange ? $delta.data('customDelta') : undefined,
+                    delta: deltaChange ? Number($delta.data('customDelta')) : undefined,
                     summary: summaryChange ? $summary.val() : undefined
                 }, toast, historyTable)
             }
