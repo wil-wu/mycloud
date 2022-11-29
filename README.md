@@ -1,7 +1,5 @@
 # mycloud
-My Graduation Project  
-
-[演示网站 tiny cloud](https://cloudself.net)
+My Graduation Project
 ### 本地运行
 ___
 1. 安装依赖
