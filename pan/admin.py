@@ -1,38 +1,18 @@
 from django.contrib import admin, messages
 from django.contrib.admin.models import LogEntry
 from django.utils.translation import ngettext
+
+from pan.utils import file_size_format
 from pan.models import (Profile, Role, Limit, RoleLimit,
-                        FileType, GenericFile, UserFile, UserDir, FileShare, ShareRecord,
-                        Notice, Message, UserMessage, UserApproval, UserLog)
-
-
-# 恢复动作
-@admin.action(description='恢复所选文件')
-def make_recycle(modeladmin, request, queryset):
-    rows = queryset.update(del_flag='0', update_by=request.user)
-    modeladmin.message_user(request, ngettext(
-        f'{rows}个文件被恢复',
-        f'{rows}个文件被恢复',
-        rows
-    ), messages.SUCCESS)
-
-
-# 回收动作
-@admin.action(description='回收所选文件')
-def make_removed(modeladmin, request, queryset):
-    rows = queryset.update(del_flag='1', update_by=request.user)
-    modeladmin.message_user(request, ngettext(
-        f'{rows}个文件被回收',
-        f'{rows}个文件被回收',
-        rows
-    ), messages.SUCCESS)
+                        FileType, GenericFile, File, Folder, RecycleFile, FileShare, AcceptRecord,
+                        Notice, Letter, Message, Apply, AuthLog)
 
 
 @admin.action(description='通过申请')
 def make_pass(modeladmin, request, queryset):
-    role = Role.objects.get(role_key='member')
+    role = Role.objects.get_or_create(role_key='member', defaults={'role_name': '会员'})[0]
     profiles = list(map(lambda item: item.create_by.profile, queryset))
-    rows = queryset.update(state='1', update_by=request.user)
+    rows = queryset.update(status='1', update_by=request.user)
     for p in profiles:
         p.role = role
 
@@ -45,8 +25,8 @@ def make_pass(modeladmin, request, queryset):
 
 
 @admin.action(description='拒绝申请')
-def make_notpass(modeladmin, request, queryset):
-    rows = queryset.update(state='2', update_by=request.user)
+def make_not_pass(modeladmin, request, queryset):
+    rows = queryset.update(status='2', update_by=request.user)
     modeladmin.message_user(request, ngettext(
         f'已拒绝{rows}个申请',
         f'已拒绝{rows}个申请',
@@ -74,7 +54,7 @@ class ProfileAdmin(admin.ModelAdmin):
     autocomplete_fields = ('user',)
     search_fields = ('user__username',)
     readonly_fields = ('create_time', 'update_by', 'update_time')
-    list_select_related = ('user',)
+    list_select_related = ('user', 'role')
     list_display = ('user', 'role', 'gender')
     list_filter = ('gender', 'role')
     list_per_page = 10
@@ -142,9 +122,13 @@ class RoleLimitAdmin(admin.ModelAdmin):
     )
     readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
     list_select_related = ('role', 'limit')
-    list_display = ('role', 'limit', 'value')
+    list_display = ('role', 'limit', 'format_value')
     list_filter = ('role', 'limit')
     list_per_page = 10
+
+    @admin.display(description='限制大小')
+    def format_value(self, obj):
+        return file_size_format(obj.value)
 
     def save_model(self, request, obj, form, change):
         if obj.create_by:
@@ -165,6 +149,7 @@ class FileTypeAdmin(admin.ModelAdmin):
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
+    search_fields = ('suffix',)
     readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
     list_display = ('type_name', 'suffix')
     list_per_page = 10
@@ -180,7 +165,7 @@ class FileTypeAdmin(admin.ModelAdmin):
 
 @admin.register(GenericFile)
 class GenericFile(admin.ModelAdmin):
-    search_fields = ('file_name', 'file_path')
+    search_fields = ('file_name',)
 
     def get_model_perms(self, request):
         return {}
@@ -188,15 +173,45 @@ class GenericFile(admin.ModelAdmin):
     def get_search_results(self, request, queryset, search_term):
         if request.GET.get('model_name') == 'fileshare':
             return super().get_search_results(request, queryset, search_term)
-        queryset = queryset.filter(file_cate=1)
+        queryset = queryset.filter(file_type=None)
         return super().get_search_results(request, queryset, search_term)
 
 
-@admin.register(UserFile)
-class UserFileAdmin(admin.ModelAdmin):
+@admin.register(File)
+class FileAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
-            'fields': ('file_uuid', 'file_name', 'file_type', 'file_size', 'file_path', 'folder', 'del_flag')
+            'fields': ('file_uuid', 'file_name', 'file_type', 'file_size', 'file_path', 'folder', 'is_del')
+        }),
+        ('其他信息', {
+            'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
+        })
+    )
+    autocomplete_fields = ('folder', 'file_type')
+    search_fields = ('file_name', 'create_by__username')
+    readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
+    list_select_related = ('create_by', 'file_type')
+    list_display = ('file_name', 'file_type', 'format_size', 'is_del', 'create_by')
+    list_filter = ('file_type', 'is_del')
+    list_per_page = 10
+
+    @admin.display(ordering='file_size', description='文件大小')
+    def format_size(self, obj):
+        return file_size_format(obj.file_size)
+
+    def has_add_permission(self, request):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        obj.update_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(Folder)
+class FolderAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {
+            'fields': ('file_uuid', 'file_name', 'file_size', 'file_path', 'folder', 'is_del')
         }),
         ('其他信息', {
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
@@ -205,71 +220,37 @@ class UserFileAdmin(admin.ModelAdmin):
     autocomplete_fields = ('folder',)
     search_fields = ('file_name', 'create_by__username')
     readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
-    actions = [make_removed, make_recycle]
     list_select_related = ('create_by',)
-    list_display = ('file_name', 'file_type', 'file_size', 'del_flag', 'create_by')
-    list_filter = ('file_type', 'del_flag')
+    list_display = ('file_name', 'format_size', 'is_del', 'create_by')
+    list_filter = ('is_del',)
     list_per_page = 10
+
+    @admin.display(ordering='file_size', description='文件大小')
+    def format_size(self, obj):
+        return file_size_format(obj.file_size)
 
     def has_add_permission(self, request):
         return False
 
     def save_model(self, request, obj, form, change):
-        if obj.create_by:
-            obj.update_by = request.user
-        else:
-            obj.create_by = request.user
-            obj.update_by = request.user
+        obj.update_by = request.user
         super().save_model(request, obj, form, change)
 
 
-@admin.register(UserDir)
-class UserDirAdmin(admin.ModelAdmin):
+@admin.register(RecycleFile)
+class RecycleFileAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
-            'fields': ('file_uuid', 'file_name', 'file_size', 'file_path', 'folder', 'del_flag')
+            'fields': ('recycle_path', 'origin_path', 'origin')
         }),
         ('其他信息', {
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
-    autocomplete_fields = ('folder',)
-    search_fields = ('file_name', 'create_by__username')
-    readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
-    actions = [make_removed, make_recycle]
-    list_select_related = ('create_by',)
-    list_display = ('file_name', 'file_size', 'del_flag', 'create_by')
-    list_filter = ('del_flag',)
-    list_per_page = 10
-
-    def has_add_permission(self, request):
-        return False
-
-    def save_model(self, request, obj, form, change):
-        if obj.create_by:
-            obj.update_by = request.user
-        else:
-            obj.create_by = request.user
-            obj.update_by = request.user
-        super().save_model(request, obj, form, change)
-
-
-@admin.register(FileShare)
-class FileShareAdmin(admin.ModelAdmin):
-    fieldsets = (
-        (None, {
-            'fields': ('secret_key', 'signature', 'expire_time', 'user_file', 'summary')
-        }),
-        ('其他信息', {
-            'fields': ('create_time', 'update_by', 'update_time', 'remark')
-        })
-    )
-    autocomplete_fields = ('user_file',)
-    search_fields = ('user_file__create_by__username', 'user_file__file_name')
-    readonly_fields = ('secret_key', 'signature', 'create_time', 'update_by', 'update_time')
-    list_select_related = ('user_file',)
-    list_display = ('user_file', 'create_time', 'expire_time')
-    list_filter = ('user_file__file_type', 'user_file__file_cate')
+    search_fields = ('origin__file_name', 'create_by__username')
+    readonly_fields = ('origin', 'create_by', 'create_time', 'update_by', 'update_time')
+    list_select_related = ('origin', 'create_by')
+    list_display = ('origin', 'create_by', 'create_time')
     list_per_page = 10
 
     def has_add_permission(self, request):
@@ -280,21 +261,47 @@ class FileShareAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-@admin.register(ShareRecord)
-class ShareRecordAdmin(admin.ModelAdmin):
+@admin.register(FileShare)
+class FileShareAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
-            'fields': ('file_share', 'recipient', 'anonymous')
+            'fields': ('secret_key', 'signature', 'expire_time', 'file', 'summary')
         }),
         ('其他信息', {
-            'fields': ('create_time', 'update_by', 'update_time', 'remark')
+            'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
-    search_fields = ('recipient__username', 'file_share__user_file__file_name')
-    readonly_fields = ('create_time', 'update_by', 'update_time')
-    list_select_related = ('file_share', 'recipient')
-    list_display = ('file_share', 'recipient', 'anonymous')
-    list_filter = ('file_share__user_file__file_type', 'file_share__user_file__file_cate')
+    autocomplete_fields = ('file',)
+    search_fields = ('create_by__username', 'file__file_name')
+    readonly_fields = ('secret_key', 'signature', 'create_by', 'create_time', 'update_by', 'update_time')
+    list_select_related = ('file',)
+    list_display = ('file', 'create_time', 'expire_time')
+    list_filter = ('file__file_type',)
+    list_per_page = 10
+
+    def has_add_permission(self, request):
+        return False
+
+    def save_model(self, request, obj, form, change):
+        obj.update_by = request.user
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(AcceptRecord)
+class AcceptRecordAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (None, {
+            'fields': ('file_share', 'anonymous')
+        }),
+        ('其他信息', {
+            'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
+        })
+    )
+    search_fields = ('create_by__username',)
+    readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
+    list_select_related = ('file_share', 'create_by')
+    list_display = ('file_share', 'create_by', 'anonymous')
+    list_filter = ('file_share__file__file_type',)
     list_per_page = 10
 
     def has_add_permission(self, request):
@@ -315,7 +322,7 @@ class NoticeAdmin(admin.ModelAdmin):
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
-    search_fields = ('create_by__username', 'notice_title')
+    search_fields = ('create_by__username', 'title')
     readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
     list_select_related = ('create_by',)
     list_display = ('title', 'create_by')
@@ -330,15 +337,15 @@ class NoticeAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-@admin.register(Message)
-class MessageAdmin(admin.ModelAdmin):
+@admin.register(Letter)
+class LetterAdmin(admin.ModelAdmin):
 
     def get_model_perms(self, request):
         return {}
 
 
-@admin.register(UserMessage)
-class UserMessageAdmin(admin.ModelAdmin):
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': ('content',)
@@ -361,11 +368,11 @@ class UserMessageAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
 
-@admin.register(UserApproval)
-class UserApprovalAdmin(admin.ModelAdmin):
+@admin.register(Apply)
+class ApplyAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
-            'fields': ('state', 'content')
+            'fields': ('status', 'content')
         }),
         ('其他信息', {
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
@@ -373,9 +380,10 @@ class UserApprovalAdmin(admin.ModelAdmin):
     )
     search_fields = ('create_by__username',)
     readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
-    actions = (make_pass, make_notpass)
+    actions = (make_pass, make_not_pass)
     list_select_related = ('create_by',)
-    list_display = ('create_by', 'state', 'create_time')
+    list_filter = ('status',)
+    list_display = ('create_by', 'status', 'create_time')
     list_per_page = 10
 
     def has_add_permission(self, request):
@@ -386,18 +394,18 @@ class UserApprovalAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
         profile = obj.create_by.profile
-        if obj.state == '1':
-            profile.role = Role.objects.get(role_key='member')
+        if obj.status == '1':
+            profile.role = Role.objects.get_or_create(role_key='member', defaults={'role_name': '会员'})[0]
             profile.save()
         else:
-            profile.role = Role.objects.get(role_key='common')
+            profile.role = Role.objects.get_or_create(role_key='common', defaults={'role_name': '普通用户'})[0]
             profile.save()
 
 
-@admin.register(UserLog)
-class UserLogAdmin(admin.ModelAdmin):
+@admin.register(AuthLog)
+class AuthLogAdmin(admin.ModelAdmin):
     search_fields = ('username',)
-    list_display = ('username', 'ipaddress', 'browser', 'os', 'action', 'action_time')
+    list_display = ('username', 'ipaddress', 'browser', 'os', 'action', 'auth_time')
     list_filter = ('action',)
     list_per_page = 15
 

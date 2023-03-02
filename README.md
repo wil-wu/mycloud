@@ -1,5 +1,6 @@
 # mycloud
-My Graduation Project
+大学毕业设计，一个美观简约，多功能的网盘web应用
+
 ### 本地运行
 ___
 1. 安装依赖
@@ -46,24 +47,25 @@ python manage.py createsuperuser
 ```
 python manage.py runserver
 ```
-### 页面截图
-___ 
-登录  
+### 功能图
+___
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/mind.png)
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/auth.png)  
+### 页面截图
+___
 
 文件  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/main.jpeg)  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/storage.jpeg)  
 
 文件详情  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/detail.jpeg)  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/audio.jpeg)  
 
 个人信息  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/info.jpeg)  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/profile.jpeg)  
 
 后台  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/admin.jpeg)
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/admin.jpeg)

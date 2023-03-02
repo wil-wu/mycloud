@@ -1,49 +1,48 @@
-from datetime import timedelta
-from json import loads as json_loads
 from pathlib import Path
+from datetime import timedelta
 from shutil import rmtree, move as file_move
-from uuid import UUID
 
 from django.conf import settings
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.signing import Signer, TimestampSigner, BadSignature, SignatureExpired
 from django.core.mail import send_mail
+from django.utils import timezone
+from django.utils.decorators import method_decorator
+from django.views.generic import TemplateView
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.http import FileResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
-from django.utils import timezone
-from django.views.generic import View, TemplateView, RedirectView
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet
+from rest_framework import status, mixins, permissions
+from rest_framework.response import Response
+from rest_framework.decorators import action
+from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
-from pan.forms import UserBaseForm, InfoForm, AvatarForm, PasswordForm
-from pan.models import (GenericFile, UserFile, UserDir, FileShare, ShareRecord,
-                        FileType, UserApproval, UserMessage, Notice)
-from pan.paginations import NoticeResultSetPagination
-from pan.serializers import FileSerializer, FileShareSerializer, FolderSerializer, NoticeSerializer
-from pan.utils import AjaxObj, get_key_signature, get_dir_size, make_archive_bytes, file_size_format
+from pan.models import (
+    GenericFile, RecycleFile, File, Folder, FileType,
+    FileShare, AcceptRecord, Notice, Profile
+)
+from pan.serializers import (
+    LoginSerializer, RegisterSerializer, PasswordSerializer, ProfileSerializer, UserSerializer,
+    NoticeSerializer, LetterSerializer, FileSerializer, RecycleSerializer, FileShareSerializer
+)
+from pan.utils import AjaxData, get_key_signature, get_dir_size, make_archive_bytes, get_uuid
 
 
+@method_decorator(ensure_csrf_cookie, 'get')
 class IndexView(TemplateView):
     """首页"""
     template_name = 'pan/index.html'
 
 
-class CloudView(LoginRequiredMixin, TemplateView):
-    """云盘"""
-    template_name = 'pan/cloud.html'
-
-
-class HistoryView(LoginRequiredMixin, TemplateView):
-    """传输历史"""
-    template_name = 'pan/history.html'
-
-
-class BinView(LoginRequiredMixin, TemplateView):
-    """回收站"""
-    template_name = 'pan/bin.html'
+@method_decorator(ensure_csrf_cookie, 'get')
+class HomeView(LoginRequiredMixin, TemplateView):
+    """主页面"""
+    template_name = 'pan/home.html'
 
 
 class FileDetailView(LoginRequiredMixin, TemplateView):
@@ -51,43 +50,9 @@ class FileDetailView(LoginRequiredMixin, TemplateView):
     template_name = 'pan/detail.html'
 
 
-class ProfileView(LoginRequiredMixin, TemplateView):
-    """个人信息"""
-    template_name = 'pan/profile.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data()
-        role = self.request.user.profile.role.role_key
-        if role == 'common':
-            context['applied'] = UserApproval.objects.filter(state='0', create_by=self.request.user).exists()
-        context['role'] = role
-        context['record'] = UserApproval.objects.filter(create_by=self.request.user)
-        context['message'] = UserMessage.objects.filter(create_by=self.request.user)
-        return context
-
-
-class ShareLinkView(TemplateView):
-    """链接获取分享文件"""
+class FileShareView(TemplateView):
+    """链接获取文件"""
     template_name = 'pan/share.html'
-
-    def get_context_data(self, **kwargs):
-        signature = self.kwargs.get('signature')
-        context = super().get_context_data()
-        try:
-            share = FileShare.objects.select_related('user_file').get(secret_key=Signer().unsign(signature))
-        except (BadSignature, FileShare.DoesNotExist):
-            context['expired'] = True
-            return context
-        expired = timezone.now() > share.expire_time
-        if not expired:
-            if self.request.user.is_authenticated:
-                ShareRecord.objects.create(file_share=share, recipient=self.request.user)
-            else:
-                ShareRecord.objects.create(file_share=share, anonymous=self.request.META.get('REMOTE_ADDR'))
-            context['file'] = share.user_file
-            context['share'] = share
-        context['expired'] = expired
-        return context
 
 
 class ResetDoneView(TemplateView):
@@ -95,111 +60,99 @@ class ResetDoneView(TemplateView):
     template_name = 'pan/reset_done.html'
 
     def get_context_data(self, **kwargs):
-        param = self.kwargs.get('param')
+        param = kwargs.get('param')
         context = super().get_context_data()
         try:
             auth = TimestampSigner().unsign_object(param, max_age=settings.TOKEN_EXPIRY)
-            if auth['token'] != settings.RESET_TOKEN:
-                context['auth'] = False
+            if not auth.get('token') or not auth.get('user') or auth['token'] != settings.RESET_TOKEN:
+                context['access'] = False
             else:
                 user = User.objects.get(username=auth['user'])
                 user.set_password(settings.RESET_PASSWORD)
                 user.save()
-                context['auth'] = True
+                context['access'] = True
         except (BadSignature, SignatureExpired):
-            context['auth'] = False
+            context['access'] = False
         return context
 
 
-class LoginView(View):
+class LoginView(APIView):
     """登录"""
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        form = UserBaseForm(request.POST)
-        if form.is_valid():
-            user = authenticate(request, username=form.cleaned_data['username'], password=form.cleaned_data['password'])
-            if user:
-                login(request, user)
-                if not form.cleaned_data['remember']:
-                    request.session.set_expiry(0)
-                return AjaxObj(msg='登录成功', data=request.session['cloud']).get_response()
+        serializer = LoginSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            login(request, serializer.validated_data['user'])
+            expiry = request.session.get_expiry_date().timestamp()
+            if not serializer.validated_data['remember']:
+                request.session.set_expiry(0)
+                expiry = timezone.now().timestamp()
+            data = {
+                'terms': request.session['terms'],
+                'expiry': expiry,
+                'profile': serializer.validated_data['profile'],
+            }
+            result = AjaxData(msg='登录成功', data=data)
+            return Response(result)
+        else:
+            result = AjaxData(400, errors=serializer.errors)
+            return Response(result)
 
-            return AjaxObj(400, '失败', {'errors': {'username': ['用户名错误或密码错误']}}).get_response()
 
-        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
-
-
-class RegisterView(View):
+class RegisterView(APIView):
     """注册"""
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        form = UserBaseForm(request.POST)
-        if form.is_valid():
-            if User.objects.filter(username=form.cleaned_data['username']).exists():
-                return AjaxObj(400, '失败', {'errors': {'username': ['用户名已存在']}}).get_response()
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data['username']
+            password = serializer.validated_data['password1']
+            User.objects.create_user(username=username, password=password)
+            result = AjaxData(msg='注册成功')
+            return Response(result)
+        else:
+            result = AjaxData(400, errors=serializer.errors)
+            return Response(result)
 
-            User.objects.create_user(username=form.cleaned_data['username'],
-                                     password=form.cleaned_data['password'])
-            return AjaxObj(msg='注册成功').get_response()
 
-        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
-
-
-class LoginOutView(RedirectView):
+class LogoutView(APIView):
     """登出"""
-    pattern_name = 'pan:index'
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         logout(request)
-        return super().get(request, *args, **kwargs)
+        return Response()
 
 
-class AlterAvatarView(LoginRequiredMixin, View):
-    """修改头像"""
-
-    def post(self, request):
-        form = AvatarForm(request.POST, request.FILES)
-        if form.is_valid():
-            if form.cleaned_data['avatar'].size > settings.MAX_AVATAR_SIZE:
-                return AjaxObj(400, f'上传图片不能大于{file_size_format(settings.MAX_AVATAR_SIZE)}').get_response()
-            profile = request.user.profile
-            profile.avatar = form.cleaned_data['avatar']
-            profile.update_by = request.user
-            profile.save()
-            return AjaxObj(msg='上传成功').get_response()
-
-        return AjaxObj(400, '不合法文件').get_response()
-
-
-class AlterPasswordView(LoginRequiredMixin, View):
+class PasswordView(APIView):
     """修改密码"""
 
     def post(self, request):
-        form = PasswordForm(request.POST)
-        if form.is_valid():
-            if request.user.check_password(form.cleaned_data['oldPassword']):
-                request.user.set_password(form.cleaned_data['newPassword'])
-                request.user.save()
-                return AjaxObj(msg='修改成功').get_response()
-
-            return AjaxObj(400, '失败', {'errors': {'oldPassword': ['原密码错误']}}).get_response()
-
-        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
+        serializer = PasswordSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            request.user.set_password(serializer.validated_data['password1'])
+            result = AjaxData(msg='修改成功')
+            return Response(result)
+        else:
+            result = AjaxData(400, errors=serializer.errors)
+            return Response(result)
 
 
-class ResetPasswordView(View):
+class ResetView(APIView):
     """重置密码"""
 
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
-        username = request.POST.get('resetName').strip()
+        username = request.data.get('username').strip()
         queryset = User.objects.filter(username=username)
-        if not queryset.exists():
-            return AjaxObj(400, '错误', {'errors': {'resetName': ['用户名不存在']}}).get_response()
+
+        if not queryset.exists() or not queryset.get().email:
+            result = AjaxData(400, errors={'username': ['用户名不存在或未绑定邮箱']})
+            return Response(result)
 
         user = queryset.get()
-        if user.email == '':
-            return AjaxObj(400, '错误', {'errors': {'resetName': ['该用户未绑定邮箱']}}).get_response()
-
         auth = {'user': user.username, 'token': settings.RESET_TOKEN}
         context = {'scheme': request.META.get('wsgi.url_scheme'),
                    'host': request.META.get('HTTP_HOST'),
@@ -214,61 +167,207 @@ class ResetPasswordView(View):
             fail_silently=True,
             html_message=html
         )
-        return AjaxObj(msg='已发送验证邮件').get_response()
+        result = AjaxData(msg='已发送验证邮件')
+        return Response(result)
 
 
-class AlterInfoView(LoginRequiredMixin, View):
-    """修改信息"""
-
-    def post(self, request):
-        form = InfoForm(request.POST)
-        if form.is_valid():
-            user = request.user
-            profile = user.profile
-            email = form.cleaned_data['email']
-            gender = form.cleaned_data['gender']
-            if email != '' and User.objects.filter(email=email).exclude(username=user.username).exists():
-                return AjaxObj(400, '失败', {'errors': {'email': ['已有用户绑定该邮箱']}}).get_response()
-
-            profile.gender = gender
-            profile.update_by = user
-            user.email = email
-            profile.save()
-            user.save()
-            return AjaxObj(msg='更改成功').get_response()
-
-        return AjaxObj(400, '失败', {'errors': form.errors}).get_response()
-
-
-class MsgApprView(LoginRequiredMixin, View):
-    """申请和留言"""
+class FileUploadView(APIView):
+    """上传文件"""
 
     def post(self, request):
-        message = request.POST.get('message').strip()
-        if message == '' or message is None:
-            return AjaxObj(400, '不合法信息').get_response()
-        if request.POST.get('way') == 'apply':
-            msg = '成功提交申请'
-            UserApproval.objects.create(content=message, create_by=request.user)
+        file = request.data.get('file')
+        if not file:
+            return Response()
+
+        used = request.session['terms']['used'] + file.size
+        if used > request.session['terms']['storage']:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        parent = request.user.files.get(file_uuid=request.data.get('parent', request.session['root']))
+        file_path = Path(parent.file_path) / file.name
+        if Path(file_path).exists():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix, defaults={'type_name': '未知'})[0]
+        dirs = []
+
+        with open(settings.PAN_ROOT / file_path, 'wb') as f:
+            for chunk in file.chunks():
+                f.write(chunk)
+        user_file = File.objects.create(file_name=file.name, file_type=file_type, file_size=file.size,
+                                        file_path=file_path, folder=parent, create_by=request.user)
+
+        # 更新父文件夹大小
+        while parent:
+            parent.file_size += file.size
+            parent.update_by = request.user
+            dirs.append(parent)
+            parent = parent.folder
+        Folder.objects.bulk_update(dirs, ('file_size', 'update_by'))
+
+        request.session['terms']['used'] = used
+        return Response(FileSerializer(user_file).data)
+
+
+class FolderUploadView(APIView):
+    """上传文件夹"""
+
+    def post(self, request):
+        files = request.data.getlist('files')
+        paths = request.data.getlist('paths')
+        name = request.data.get('name')
+
+        if not files or not paths or not name:
+            return Response()
+
+        path_nums = len(paths)
+        if path_nums * 2 > settings.DATA_UPLOAD_MAX_NUMBER_FIELDS:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        used = request.session['terms']['used'] + sum(s.size for s in files)
+        if used > request.session['terms']['storage']:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        parent = request.user.files.get(file_uuid=request.data.get('parent', request.session['root']))
+        parent_path = Path(parent.file_path)
+        folder_path = parent_path / name
+        if Path(folder_path).exists():
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        objs = []
+        dirs = []
+
+        for i in range(path_nums):
+            # 递归创建目录
+            parts = Path(paths[i]).parts[:-1]
+            temp_folder = parent
+            temp_path = parent_path
+            for part in parts:
+                part_path = temp_path / part
+                if Path(settings.PAN_ROOT / part_path).exists():
+                    prev = Folder.objects.get(file_path=part_path)
+                    temp_folder = prev
+                    temp_path = Path(part_path)
+                else:
+                    prev = Folder(file_name=part, file_path=part_path, folder=temp_folder, create_by=request.user)
+                    prev.save()
+                    dirs.append(prev)
+                    Path.mkdir(settings.PAN_ROOT / part_path)
+                    temp_folder = prev
+                    temp_path = Path(part_path)
+            # 创建文件
+            file = files[i]
+            file_path = temp_path / file.name
+            with open(settings.PAN_ROOT / file_path, 'wb') as f:
+                for chunk in file.chunks():
+                    f.write(chunk)
+            file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix,
+                                                       defaults={'type_name': '未知'})[0]
+            objs.append(File(file_name=file.name, file_type=file_type, file_size=file.size,
+                             file_path=file_path, folder=temp_folder, create_by=request.user))
+
+        # 计算文件大小并更新数据库
+        for d in dirs:
+            d.file_size = get_dir_size(settings.PAN_ROOT / d.file_path)
+            d.update_by = request.user
+
+        while parent:
+            parent.file_size = get_dir_size(settings.PAN_ROOT / parent_path)
+            parent.update_by = request.user
+            dirs.append(parent)
+            parent = parent.folder
+            parent_path = parent.file_path if parent else None
+
+        File.objects.bulk_create(objs)
+        Folder.objects.bulk_update(dirs, ('file_size', 'update_by'))
+        folder = Folder.objects.get(file_path=folder_path)
+
+        request.session['terms']['used'] = used
+        return Response(FileSerializer(folder).data)
+
+
+class ProfileViewSet(GenericViewSet):
+    """个人信息"""
+    serializer_class = ProfileSerializer
+    filter_backends = []
+    pagination_class = None
+
+    def get_queryset(self):
+        return Profile.objects.select_related('user').all()
+
+    @action(methods=['PATCH'], detail=False)
+    def partial(self, request):
+        serializer = self.get_serializer(request.user.profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save(update_by=request.user)
+            result = AjaxData(msg='更改成功', data=serializer.data)
+            return Response(result)
         else:
-            msg = '感谢你的留言'
-            UserMessage.objects.create(content=message, create_by=request.user)
-        return AjaxObj(200, msg).get_response()
+            result = AjaxData(400, errors=serializer.errors)
+            return Response(result)
+
+    @action(methods=['PATCH'], detail=False)
+    def user(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            result = AjaxData(msg='更改成功', data=serializer.data)
+            return Response(result)
+        else:
+            result = AjaxData(400, errors=serializer.errors)
+            return Response(result)
 
 
-class FileBlobView(View):
-    """下载文件"""
+class FileViewSet(mixins.ListModelMixin,
+                  mixins.UpdateModelMixin,
+                  mixins.RetrieveModelMixin,
+                  GenericViewSet):
+    """网盘文件api"""
+    serializer_class = FileSerializer
+    pagination_class = None
 
-    def get(self, request, *args, **kwargs):
-        uuid = self.kwargs.get('uuid')
-        blob = self.request.GET.get('blob')
-        root = settings.MEDIA_ROOT
+    lookup_field = 'file_uuid'
+    lookup_url_kwarg = 'uuid'
+
+    search_fields = ['file_name']
+    ordering_fields = ['file_name', 'file_size', 'create_time']
+
+    def get_queryset(self):
+        return self.request.user.files.select_related('file_type').filter(is_del=False)
+
+    @action(methods=['GET'], detail=False)
+    def storage(self, request):
+        parent = request.query_params.get('parent', self.request.session['root'])
         try:
-            file = GenericFile.objects.get(file_uuid=uuid)
-        except GenericFile.DoesNotExist:
-            return AjaxObj(400, "文件不存在").get_response()
+            queryset = self.get_queryset().filter(folder=parent)
+        except ValidationError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        if file.file_cate == '0':
+        return Response(FileSerializer(self.filter_queryset(queryset), many=True).data)
+
+    @action(methods=['GET'], detail=False)
+    def files(self, request):
+        queryset = self.get_queryset().exclude(file_type=None)
+        return Response(FileSerializer(self.filter_queryset(queryset), many=True).data)
+
+    @action(methods=['GET'], detail=False)
+    def folders(self, request):
+        exclude = self.request.query_params.get('exclude')
+        parent = self.request.query_params.get('parent', self.request.session['root'])
+        try:
+            queryset = self.get_queryset().filter(folder=parent, file_type=None).exclude(file_uuid=exclude)
+        except ValidationError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(FileSerializer(queryset, many=True).data)
+
+    @action(methods=['GET'], detail=True, permission_classes=[permissions.AllowAny])
+    def binary(self, request, uuid=None):
+        file = self.get_object()
+        root = settings.PAN_ROOT
+
+        if file.file_type is not None:
+            blob = request.query_params.get('blob')
             response = FileResponse(open(root / file.file_path, 'rb'), as_attachment=True)
             if blob:
                 response.as_attachment = False
@@ -276,411 +375,352 @@ class FileBlobView(View):
         else:
             return FileResponse(make_archive_bytes(root / file.file_path), as_attachment=True, filename='cloud.zip')
 
+    @action(methods=['GET'], detail=True)
+    def share(self, request, uuid=None):
+        file = self.get_object()
+        key, signature = get_key_signature()
 
-class DuplicatedCheck(LoginRequiredMixin, View):
-    """检查文件重名"""
-
-    def get(self, request, *args, **kwargs):
-        folder = request.user.files.get(file_uuid=request.GET.get('folderUUID', request.session['root']))
-        path = Path(folder.file_path) / request.GET.get('uploadName')
-
-        if (Path(settings.MEDIA_ROOT) / path).exists():
-            return AjaxObj(400, '目标文件夹内存在同名文件，请注意回收站').get_response()
-
-        return AjaxObj().get_response()
-
-
-class FileUploadView(LoginRequiredMixin, View):
-    """上传文件"""
-
-    def post(self, request):
-        file = request.FILES.get('file')
-        if file is None:
-            return AjaxObj().get_response()
-
-        use = request.session['cloud']['used'] + file.size
-        if use > request.session['cloud']['storage']:
-            return AjaxObj(400, '剩余空间不足').get_response()
-
-        folder = request.user.files.get(file_uuid=request.POST.get('folderUUID', request.session['root']))
-        file_path = Path(folder.file_path) / file.name
-        file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix, defaults={'type_name': '未知'})[0]
-        dirs = []
-
-        with open(settings.MEDIA_ROOT / file_path, 'wb') as f:
-            for chunk in file.chunks():
-                f.write(chunk)
-        UserFile(file_name=file.name, file_type=file_type, file_size=file.size, file_path=file_path,
-                 folder=folder, create_by=request.user).save()
-
-        # 更新父文件夹大小
-        while folder is not None:
-            folder.file_size = folder.file_size + file.size
-            folder.update_by = request.user
-            dirs.append(folder)
-            folder = folder.folder
-        UserDir.objects.bulk_update(dirs, ('file_size', 'update_by'))
-
-        request.session['cloud']['used'] = use
-        return AjaxObj(200, '成功上传文件').get_response()
-
-
-class FolderUploadView(LoginRequiredMixin, View):
-    """上传文件夹"""
-
-    def post(self, request):
-        files = request.FILES.getlist('files')
-        paths = request.POST.getlist('paths')
-
-        if files is None or paths is None:
-            return AjaxObj().get_response()
-
-        path_nums = len(paths)
-        if path_nums * 2 > settings.DATA_UPLOAD_MAX_NUMBER_FIELDS:
-            return AjaxObj(400, f'上传条目数超过{settings.DATA_UPLOAD_MAX_NUMBER_FIELDS}限制').get_response()
-
-        use = request.session['cloud']['used'] + sum(s.size for s in files)
-        if use > request.session['cloud']['storage']:
-            return AjaxObj(400, '剩余空间不足').get_response()
-
-        folder = request.user.files.get(file_uuid=request.POST.get('folderUUID', request.session['root']))
-        folder_path = Path(folder.file_path)
-        objs = []
-        dirs = []
-
-        for i in range(path_nums):
-            # 递归创建目录
-            parts = Path(paths[i]).parts[:-1]
-            temp_folder = folder
-            temp_path = folder_path
-            for part in parts:
-                part_path = temp_path / part
-                if Path(settings.MEDIA_ROOT / part_path).exists():
-                    prev = UserDir.objects.get(file_path=part_path)
-                    temp_folder = prev
-                    temp_path = Path(part_path)
-                else:
-                    prev = UserDir(file_name=part, file_path=part_path, folder=temp_folder, create_by=request.user)
-                    dirs.append(prev)
-                    prev.save()
-                    Path.mkdir(settings.MEDIA_ROOT / part_path)
-                    temp_folder = prev
-                    temp_path = Path(part_path)
-            # 创建文件
-            file = files[i]
-            file_path = temp_path / file.name
-            with open(settings.MEDIA_ROOT / file_path, 'wb') as f:
-                for chunk in file.chunks():
-                    f.write(chunk)
-            file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix,
-                                                       defaults={'type_name': '未知'})[0]
-            objs.append(UserFile(file_name=file.name, file_cate='0', file_type=file_type, file_size=file.size,
-                                 file_path=file_path, folder=temp_folder, create_by=request.user))
-
-        # 计算文件大小并更新数据库
-        for d in dirs:
-            d.file_size = get_dir_size(settings.MEDIA_ROOT / d.file_path)
-            d.update_by = request.user
-
-        while folder is not None:
-            folder.file_size = get_dir_size(settings.MEDIA_ROOT / folder_path)
-            folder.update_by = request.user
-            dirs.append(folder)
-            folder = folder.folder
-            folder_path = folder.file_path if folder is not None else None
-
-        UserFile.objects.bulk_create(objs)
-        UserDir.objects.bulk_update(dirs, ('file_size', 'update_by'))
-
-        request.session['cloud']['used'] = use
-        return AjaxObj(200, '成功上传文件夹').get_response()
-
-
-class ShareCreateView(LoginRequiredMixin, View):
-    """创建分享文件"""
-
-    def post(self, request):
-        uuid = request.POST.get('uuid')
-        while True:
+        while FileShare.objects.filter(secret_key=key).exists():
             key, signature = get_key_signature()
-            if not FileShare.objects.filter(secret_key=key).exists():
-                break
 
-        share = FileShare.objects.create(secret_key=key, signature=signature,
-                                         user_file=GenericFile.objects.get(file_uuid=uuid),
-                                         expire_time=timezone.now() + timedelta(days=7))
-        return AjaxObj(200, data={'key': key, 'signature': signature, 'id': share.id}).get_response()
+        obj = FileShare.objects.create(secret_key=key, signature=signature, file=file, create_by=request.user,
+                                       expire_time=timezone.now() + timedelta(days=7))
+        return Response(FileShareSerializer(obj).data)
 
+    @action(methods=['POST'], detail=False)
+    def recycle(self, request):
+        uuids = request.data.get('uuids')
+        if not uuids:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-class ShareUpdateView(LoginRequiredMixin, View):
-    """更新分享文件"""
-
-    def post(self, request):
-        data = json_loads(request.body)
-        share = FileShare.objects.get(id=data.get('id'))
-        delta = data.get('delta')
-        summary = data.get('summary')
-        if delta is None and summary is not None:
-            share.summary = summary
-        elif delta is not None and summary is None:
-            share.expire_time = timezone.now() + timedelta(days=delta)
-        else:
-            share.summary = summary
-            share.expire_time = timezone.now() + timedelta(days=delta if delta is not None else 0)
-        share.update_by = request.user
-        share.save()
-        return AjaxObj(200, '链接设置成功').get_response()
-
-
-class ShareGetView(View):
-    """获取分享文件"""
-
-    def post(self, request):
-        key = request.POST.get('key')
         try:
-            share = FileShare.objects.select_related('user_file').get(secret_key=key)
-        except FileShare.DoesNotExist:
-            return AjaxObj(400, '口令已过期').get_response()
+            queryset = self.get_queryset().select_related('folder').filter(file_uuid__in=uuids)
+        except ValidationError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        if timezone.now() > share.expire_time:
-            return AjaxObj(400, '口令已过期').get_response()
-        file = share.user_file
-        if request.user.is_authenticated:
-            ShareRecord.objects.create(file_share=share, recipient=request.user)
-        else:
-            ShareRecord.objects.create(file_share=share, anonymous=request.META.get('REMOTE_ADDR'))
-        return AjaxObj(200, data={
-            'file': {'name': file.file_name, 'size': file.file_size, 'uuid': file.file_uuid},
-            'share': {'expire': share.expire_time, 'summary': share.summary}
-        }).get_response()
+        removed = 0
+        folder = None
+        folders = []
+        objs = []
+        pan_root = settings.PAN_ROOT
+        bin_root = settings.BIN_ROOT
+        rec_root = Path(RecycleFile.objects.get(pk=request.session['rec_root']).recycle_path)
 
+        # 递归更新子文件
+        def recursive_update(obj):
+            obj.is_del = True
+            obj.update_by = request.user
+            objs.append(obj)
 
-class ShareDelete(LoginRequiredMixin, View):
-    """删除分享文件"""
+            if obj.file_type is None:
+                files = GenericFile.objects.filter(folder=obj)
+                for f in files:
+                    recursive_update(f)
 
-    def post(self, request):
-        ids = json_loads(request.body).get('ids')
-        for i in ids:
-            try:
-                FileShare.objects.select_related('user_file').filter(
-                    user_file__create_by=request.user).get(id=i).delete()
-            except FileShare.DoesNotExist:
-                return AjaxObj(400, "所选记录中有记录不存在或已删除").get_response()
-        return AjaxObj(200, '成功删除所选记录').get_response()
+        for file in queryset:
+            if folder is None:
+                folder = file.folder
+            removed += file.file_size
+            rec_path = rec_root / (get_uuid() + Path(file.file_name).suffix)
+            (pan_root / file.file_path).rename(bin_root / rec_path)
+            RecycleFile.objects.create(recycle_path=rec_path, origin_path=file.file_path,
+                                       origin=file, create_by=request.user)
+            recursive_update(file)
 
+        queryset.update(file_path='')
 
-class FileMoveView(LoginRequiredMixin, View):
-    """文件移动"""
+        while folder and folder.folder:
+            folder.file_size -= removed
+            folder.update_by = request.user
+            folders.append(folder)
+            folder = folder.folder
 
-    def post(self, request):
-        data = json_loads(request.body)
-        if data.get('src') == data.get('dst'):
-            return AjaxObj(400, '目标文件夹为本身').get_response()
+        if folders:
+            Folder.objects.bulk_update(folders, ('file_size', 'update_by'))
+        if objs:
+            GenericFile.objects.bulk_update(objs, ('is_del', 'update_by'))
 
-        src = request.user.files.get(file_uuid=data.get('src'))
-        dst = request.user.files.get(file_uuid=data.get('dst', request.session['root']))
+        result = AjaxData(msg='成功回收所选文件')
+        return Response(result)
 
-        if request.user.files.filter(folder=dst, file_cate=src.file_cate, file_name=src.file_name).exists():
-            return AjaxObj(400, '目标文件夹内存在同名文件').get_response()
+    @action(methods=['POST'], detail=True)
+    def move(self, request, uuid=None):
+        dst_uuid = request.data.get('dst_uuid', request.session['root'])
 
-        dirs = []
+        if dst_uuid == uuid:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        src = self.get_object()
+        dst = request.user.files.get(file_uuid=dst_uuid, file_type=None)
+
+        if (settings.PAN_ROOT / dst.file_path / src.file_name).exists():
+            result = AjaxData(400, msg='目标文件夹内存在同名文件')
+            return Response(result)
+
+        objs = []
+        folders = []
         src_folder = src.folder
 
-        file_move(str(settings.MEDIA_ROOT / src.file_path), str(settings.MEDIA_ROOT / dst.file_path))
-        src.folder = dst
-        src.file_path = Path(dst.file_path) / src.file_name
-        src.update_by = request.user
-        src.save()
+        file_move(str(settings.PAN_ROOT / src.file_path), str(settings.PAN_ROOT / dst.file_path))
+
+        # 递归更新文件路径
+        def recursive_update(obj, parent):
+            obj.folder = parent
+            obj.file_path = Path(parent.file_path) / obj.file_name
+            obj.update_by = request.user
+            objs.append(obj)
+
+            if obj.file_type is None:
+                files = GenericFile.objects.filter(folder=obj)
+                for f in files:
+                    recursive_update(f, obj)
+
+        recursive_update(src, dst)
+        GenericFile.objects.bulk_update(objs, ('folder', 'file_path', 'update_by'))
 
         # 更新目的文件夹和原文件夹以及其父文件夹大小（除根目录）
-        while dst.folder is not None:
-            dst.file_size = dst.file_size + src.file_size
+        while dst.folder:
+            dst.file_size += src.file_size
             dst.update_by = request.user
-            dirs.append(dst)
+            folders.append(dst)
             dst = dst.folder
-        while src_folder.folder is not None:
-            src_folder.file_size = src_folder.file_size - src.file_size
+        while src_folder.folder:
+            src_folder.file_size -= src.file_size
             src_folder.update_by = request.user
-            dirs.append(src_folder)
+            folders.append(src_folder)
             src_folder = src_folder.folder
 
-        if len(dirs) != 0:
-            UserDir.objects.bulk_update(dirs, ('file_size', 'update_by'))
-
-        return AjaxObj(200, '成功移动文件夹').get_response()
-
-
-class FileDeleteView(LoginRequiredMixin, View):
-    """文件删除"""
-
-    def post(self, request):
-        uuids = json_loads(request.body).get('uuids')
-        use = request.session['cloud']['used']
-        code = msg = folder = None
-        discard = 0
-        dirs = []
-        for uuid in uuids:
-            try:
-                file = request.user.files.get(file_uuid=uuid)
-                discard += file.file_size
-                if folder is None:
-                    folder = file.folder
-            except GenericFile.DoesNotExist:
-                break
-            real_path = settings.MEDIA_ROOT / file.file_path
-            if file.file_cate == '0':
-                real_path.unlink()
-            else:
-                rmtree(real_path)
-            file.delete()
-        else:
-            code, msg = 200, '成功删除所选文件'
-        if code is None and msg is None:
-            code, msg = 400, '所选文件中有文件不存在或已删除'
-
-        # 更新父文件夹大小
-        while folder is not None:
-            folder.file_size = folder.file_size - discard
-            folder.update_by = request.user
-            dirs.append(folder)
-            folder = folder.folder
-        if len(dirs) != 0:
-            UserDir.objects.bulk_update(dirs, ('file_size', 'update_by'))
-
-        use -= discard
-        request.session['cloud']['used'] = use
-
-        return AjaxObj(code, msg).get_response()
+        if folders:
+            Folder.objects.bulk_update(folders, ('file_size', 'update_by'))
+        result = AjaxData(msg='成功移动文件')
+        return Response(result)
 
 
-class FileTrashView(LoginRequiredMixin, View):
-    """文件软删，恢复"""
-
-    def post(self, request):
-        json_data = json_loads(request.body)
-        method = json_data.get('method')
-        uuids = json_data.get('uuids')
-        objs = []
-        if method == 'trash':
-            del_flag = '1'
-            msg = '成功删除所选文件'
-        else:
-            del_flag = '0'
-            msg = '成功恢复所选文件'
-        for uuid in uuids:
-            try:
-                file = request.user.files.get(file_uuid=uuid)
-            except GenericFile.DoesNotExist:
-                return AjaxObj(400, '所选文件中有文件不存在或已删除').get_response()
-            file.del_flag = del_flag
-            file.update_by = request.user
-            objs.append(file)
-
-        GenericFile.objects.bulk_update(objs, ('del_flag',))
-        return AjaxObj(200, msg).get_response()
-
-
-class CloudViewSet(ModelViewSet):
-    """云盘api"""
-    serializer_class = FileSerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = None
-
-    def get_queryset(self):
-        folder_uuid = self.request.query_params.get('folderUUID', self.request.session['root'])
-        sort = self.request.query_params.get('sort')
-        order = self.request.query_params.get('order')
-        search = self.request.query_params.get('search')
-
-        if search:
-            queryset = self.request.user.files.filter(file_name__icontains=search, file_cate='0', del_flag='0')
-        else:
-            queryset = self.request.user.files.select_related('folder').filter(folder__file_uuid=folder_uuid,
-                                                                               del_flag='0')
-        if sort:
-            if order == 'desc':
-                queryset = queryset.order_by('-' + sort)
-            else:
-                queryset = queryset.order_by(sort)
-        return queryset
-
-
-class HistoryViewSet(ModelViewSet):
-    """传输历史api"""
-    serializer_class = FileShareSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        sort = self.request.query_params.get('sort')
-        order = self.request.query_params.get('order')
-        search = self.request.query_params.get('search')
-        queryset = FileShare.objects.select_related('user_file').filter(user_file__create_by=self.request.user)
-
-        if search:
-            queryset = queryset.filter(user_file__file_name__icontains=search)
-        if sort:
-            if order == 'desc':
-                queryset = queryset.order_by('-' + sort)
-            else:
-                queryset = queryset.order_by(sort)
-        return queryset
-
-
-class BinViewSet(ModelViewSet):
+class RecycleViewSet(mixins.ListModelMixin,
+                     GenericViewSet):
     """回收站api"""
-    serializer_class = FileSerializer
-    permission_classes = [IsAuthenticated]
+    serializer_class = RecycleSerializer
+    search_fields = ['origin__file_name']
+    ordering_fields = ['origin__file_name', 'origin__file_size', 'create_time']
 
     def get_queryset(self):
-        sort = self.request.query_params.get('sort')
-        order = self.request.query_params.get('order')
-        search = self.request.query_params.get('search')
-        queryset = self.request.user.files.filter(del_flag='1')
+        return self.request.user.recycle_files.select_related('origin__file_type').exclude(origin=None)
 
-        if search:
-            queryset = queryset.filter(file_name__icontains=search)
-        if sort:
-            if order == 'desc':
-                queryset = queryset.order_by('-' + sort)
-            else:
-                queryset = queryset.order_by(sort)
-        return queryset
+    @action(methods=['POST'], detail=False)
+    def recover(self, request):
+        pks = request.data.get('pks')
+        if not pks:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
-
-class FolderViewSet(ModelViewSet):
-    """文件夹api"""
-    serializer_class = FolderSerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = None
-
-    def get_queryset(self):
-        exclude = self.request.query_params.get('exclude')
-        folder_uuid = self.request.query_params.get('folderUUID', self.request.session['root'])
-        return self.request.user.files.select_related('folder').filter(folder__file_uuid=folder_uuid,
-                                                                       file_cate='1',
-                                                                       del_flag='0').exclude(file_uuid=exclude)
-
-
-class FileViewSet(ModelViewSet):
-    """文件详情api"""
-    serializer_class = FileSerializer
-    permission_classes = [IsAuthenticated]
-    pagination_class = None
-
-    def get_queryset(self):
         try:
-            uuid = UUID(hex=self.request.query_params.get('uuid'))
+            queryset = self.get_queryset().select_related('origin__folder').filter(pk__in=pks)
         except ValueError:
-            return GenericFile.objects.none()
-        return self.request.user.files.filter(file_uuid=uuid, file_cate='0')
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        folders = []
+        folder_dict = {}
+        objs = []
+        clash = False
+        conflict = False
+        pan_root = settings.PAN_ROOT
+        bin_root = settings.BIN_ROOT
+        user_root = Folder.objects.get(file_uuid=request.session['root'])
+
+        # 递归更新子文件
+        def recursive_update(obj, parent):
+            obj.is_del = False
+            obj.folder = parent
+            obj.file_path = Path(parent.file_path) / obj.file_name
+            obj.update_by = request.user
+            objs.append(obj)
+
+            if obj.file_type is None:
+                files = GenericFile.objects.filter(folder=obj)
+                for f in files:
+                    recursive_update(f, obj)
+
+        for rec in queryset:
+            if (pan_root / rec.origin_path).exists() or not (pan_root / rec.origin.folder.file_path).exists():
+                # 冲突处理
+                clash = True
+                conflict = True
+                rec_name = rec.origin.file_name
+                file_name = rec_name.partition('.')[0] + get_uuid() + ''.join(Path(rec_name).suffixes)
+                rec.origin.file_name = file_name
+                recursive_update(rec.origin, user_root)
+                Path(bin_root / rec.recycle_path).rename(pan_root / user_root.file_path / file_name)
+            else:
+                recursive_update(rec.origin, rec.origin.folder)
+                Path(bin_root / rec.recycle_path).rename(pan_root / rec.origin_path)
+
+            folder = rec.origin.folder
+            if folder in folder_dict:
+                if not clash:
+                    folder_dict[folder] += rec.origin.file_size
+            else:
+                if not clash:
+                    folder_dict[folder] = rec.origin.file_size
+
+        queryset.delete()
+
+        # 更新父文件夹
+        for folder, size in folder_dict.items():
+            while folder and folder.folder:
+                folder.file_size += size
+                folder.update_by = request.user
+                folders.append(folder)
+                folder = folder.folder
+
+        if folders:
+            Folder.objects.bulk_update(folders, ('file_size', 'update_by'))
+        if objs:
+            GenericFile.objects.bulk_update(objs, ('file_name', 'is_del', 'folder', 'file_path', 'update_by'))
+
+        if conflict:
+            msg = '所选文件中原文件夹不存在或存在同名文件，已随机命名打包存放置根目录下'
+        else:
+            msg = '成功恢复所选文件'
+        result = AjaxData(msg=msg)
+        return Response(result)
+
+    @action(methods=['DELETE'], detail=False)
+    def remove(self, request):
+        pks = request.data.get('pks')
+        if not pks:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            queryset = self.get_queryset().filter(pk__in=pks)
+        except ValueError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        removed = 0
+        uuids = []
+        bin_root = settings.BIN_ROOT
+
+        for rec in queryset:
+            removed += rec.origin.file_size
+            uuids.append(rec.origin.file_uuid)
+            if rec.origin.file_type is None:
+                rmtree(bin_root / rec.recycle_path)
+            else:
+                (bin_root / rec.recycle_path).unlink()
+
+        GenericFile.objects.filter(file_uuid__in=uuids).delete()
+
+        root = Folder.objects.get(file_uuid=request.session['root'])
+        root.file_size -= removed
+        root.save()
+
+        request.session['terms']['used'] -= removed
+        result = AjaxData(msg='成功删除所选文件')
+        return Response(result)
 
 
-class NoticeViewSet(ModelViewSet):
+class FileShareViewSet(mixins.ListModelMixin,
+                       mixins.UpdateModelMixin,
+                       mixins.RetrieveModelMixin,
+                       GenericViewSet):
+    """文件分享api"""
+    serializer_class = FileShareSerializer
+    search_fields = ['file__file_name']
+    ordering_fields = ['create_time', 'expire_time']
+
+    def get_queryset(self):
+        return self.request.user.fileshare_set.select_related('file').filter(file__is_del=False)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            if getattr(instance, '_prefetched_objects_cache', None):
+                instance._prefetched_objects_cache = {}
+            result = AjaxData(msg='成功设置链接', data=serializer.data)
+            return Response(result)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_update(self, serializer):
+        delta = self.request.data.get('delta')
+        user = self.request.user
+        if delta and type(delta) == int:
+            serializer.save(expire_time=timezone.now() + timedelta(days=delta), update_by=user)
+        else:
+            serializer.save(update_by=user)
+
+    @action(methods=['DELETE'], detail=False)
+    def remove(self, request):
+        pks = request.data.get('pks')
+        if not pks:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            self.get_queryset().filter(pk__in=pks).delete()
+        except ValueError:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        result = AjaxData(msg="删除成功")
+        return Response(result)
+
+    @action(methods=['GET'], detail=False, permission_classes=[permissions.AllowAny])
+    def secret(self, request):
+        key = request.query_params.get('key')
+        if not key:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if len(key) > 6:
+                obj = FileShare.objects.select_related('file').get(secret_key=Signer().unsign(key))
+            else:
+                obj = FileShare.objects.select_related('file').get(secret_key=key)
+        except (BadSignature, FileShare.DoesNotExist):
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if obj.expire_time < timezone.now() or obj.file.is_del:
+            return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if request.user.is_authenticated:
+            AcceptRecord.objects.create(file_share=obj, create_by=request.user)
+        else:
+            AcceptRecord.objects.create(file_share=obj, anonymous=request.META.get('REMOTE_ADDR'))
+        return Response(FileShareSerializer(obj).data)
+
+
+class LetterViewSet(mixins.CreateModelMixin,
+                    mixins.ListModelMixin,
+                    GenericViewSet):
+    """申请和留言api"""
+    serializer_class = LetterSerializer
+    pagination_class = None
+    filter_backends = []
+
+    def get_queryset(self):
+        return self.request.user.letters.all()
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        if serializer.is_valid():
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            result = AjaxData(msg='提交成功', data=serializer.data)
+            return Response(result, headers=headers)
+        else:
+            result = AjaxData(400, errors=serializer.errors)
+            return Response(result)
+
+    def perform_create(self, serializer):
+        serializer.save(create_by=self.request.user)
+
+
+class NoticeViewSet(mixins.ListModelMixin,
+                    GenericViewSet):
     """通知api"""
     serializer_class = NoticeSerializer
-    queryset = Notice.objects.all()
-    permission_classes = [IsAuthenticated]
-    pagination_class = NoticeResultSetPagination
+    queryset = Notice.objects.select_related('create_by').all()
+    filter_backends = []
 
 
 # 异常视图

@@ -55,7 +55,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -114,6 +114,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.AllowAllUsersModelBackend']
+
 # Internationalization
 # https://docs.djangoproject.com/en/3.2/topics/i18n/
 
@@ -142,9 +144,6 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/'
 
-# Upload avatar limit
-MAX_AVATAR_SIZE = 3145728
-
 # Cross origin
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:8000',
@@ -153,6 +152,13 @@ CORS_ALLOWED_ORIGINS = [
 
 # Rest framework
 REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter'
+    ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
     'PAGE_SIZE': 8
 }
@@ -162,7 +168,14 @@ REST_FRAMEWORK = {
 #     '127.0.0.1'
 # ]
 
-# reset token
+# Storage root
+PAN_ROOT = MEDIA_ROOT / 'pan'
+BIN_ROOT = MEDIA_ROOT / 'bin'
+
+# Upload avatar limit
+MAX_AVATAR_SIZE = 1048576
+
+# Reset token
 RESET_TOKEN = token_hex(8)
 
 RESET_PASSWORD = '123456'

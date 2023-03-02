@@ -16,12 +16,41 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `pan_rolelimit`
+--
+
+DROP TABLE IF EXISTS `pan_rolelimit`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `pan_rolelimit` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `create_time` datetime(6) NOT NULL,
+  `update_time` datetime(6) NOT NULL,
+  `remark` longtext NOT NULL,
+  `value` bigint NOT NULL,
+  `create_by_id` int DEFAULT NULL,
+  `limit_id` bigint NOT NULL,
+  `role_id` bigint NOT NULL,
+  `update_by_id` int DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `pan_rolelimit_create_by_id_f7391961_fk_auth_user_id` (`create_by_id`),
+  KEY `pan_rolelimit_limit_id_f8b193ad_fk_pan_limit_id` (`limit_id`),
+  KEY `pan_rolelimit_role_id_6f78abcf_fk_pan_role_id` (`role_id`),
+  KEY `pan_rolelimit_update_by_id_6710b13d_fk_auth_user_id` (`update_by_id`),
+  CONSTRAINT `pan_rolelimit_create_by_id_f7391961_fk_auth_user_id` FOREIGN KEY (`create_by_id`) REFERENCES `auth_user` (`id`),
+  CONSTRAINT `pan_rolelimit_limit_id_f8b193ad_fk_pan_limit_id` FOREIGN KEY (`limit_id`) REFERENCES `pan_limit` (`id`),
+  CONSTRAINT `pan_rolelimit_role_id_6f78abcf_fk_pan_role_id` FOREIGN KEY (`role_id`) REFERENCES `pan_role` (`id`),
+  CONSTRAINT `pan_rolelimit_update_by_id_6710b13d_fk_auth_user_id` FOREIGN KEY (`update_by_id`) REFERENCES `auth_user` (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping data for table `pan_rolelimit`
 --
 
 LOCK TABLES `pan_rolelimit` WRITE;
 /*!40000 ALTER TABLE `pan_rolelimit` DISABLE KEYS */;
-INSERT INTO `pan_rolelimit` VALUES (1,'2021-12-07 10:24:51.424723','2021-12-07 10:24:51.424723','',17179869184,1,1,1,1),(2,'2021-12-07 10:25:21.851276','2021-12-07 10:25:21.851276','',83886080,1,2,1,1),(3,'2021-12-07 10:25:27.666505','2021-12-07 10:25:27.666505','',83886080,1,3,1,1),(4,'2021-12-07 10:26:38.768117','2021-12-07 10:26:38.768117','',8589934592,1,1,2,1),(5,'2021-12-07 10:27:05.959850','2021-12-07 10:27:05.959850','',41943040,1,2,2,1),(6,'2021-12-07 10:27:17.394846','2021-12-07 10:27:17.394846','',41943040,1,3,2,1),(7,'2021-12-07 10:27:48.051268','2021-12-07 10:27:48.051268','',5368709120,1,1,3,1),(8,'2021-12-07 10:28:05.510591','2021-12-07 10:28:05.510591','',20971520,1,2,3,1),(9,'2021-12-07 10:28:15.691532','2021-12-07 10:28:15.691532','',20971520,1,3,3,1),(10,'2021-12-08 05:49:21.105227','2021-12-08 05:49:21.105227','',83886080,1,4,1,1),(11,'2021-12-08 05:49:46.651025','2021-12-08 05:49:46.651025','',41943040,1,4,2,1),(12,'2021-12-08 05:49:57.529395','2021-12-08 05:49:57.529395','',20971520,1,4,3,1);
+INSERT INTO `pan_rolelimit` VALUES (1,'2021-12-07 10:24:51.424723','2023-01-19 06:05:18.544467','',8589934592,1,1,1,1),(4,'2021-12-07 10:26:38.768117','2021-12-07 10:26:38.768117','',8589934592,1,1,2,1),(7,'2021-12-07 10:27:48.051268','2021-12-07 10:27:48.051268','',5368709120,1,1,3,1),(13,'2023-01-19 06:02:36.161304','2023-01-19 06:02:36.161304','',20971520,1,5,3,1),(14,'2023-01-19 06:02:57.683110','2023-01-19 06:02:57.683110','',41943040,1,5,2,1),(15,'2023-01-19 06:03:11.998826','2023-01-19 06:03:11.998826','',41943040,1,5,1,1);
 /*!40000 ALTER TABLE `pan_rolelimit` ENABLE KEYS */;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
@@ -34,4 +63,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2021-12-22 22:03:15
+-- Dump completed on 2023-01-28 10:52:19

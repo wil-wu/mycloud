@@ -1,0 +1,751 @@
+<!DOCTYPE html>{% load static %}
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="{% static 'pan/vendor/mdb/mdb.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/vendor/font-awesome/all.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/vendor/bootstrap-table/bootstrap-table.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/vendor/cropperjs/cropper.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/css/style.css' %}" rel="stylesheet">
+    <title></title>
+</head>
+<body>
+<div class="container-fluid gx-0">
+    <div class="row gx-0">
+        <div class="col-0 col-lg-2 gx-0">
+            <div class="offcanvas offcanvas-start border-end-0 side-navbar" id="sidebar" tabindex="-1"
+                 data-mdb-scroll="true" data-mdb-backdrop="false">
+                <div class="offcanvas-header">
+                    <h5 class="offcanvas-title"><a href="/" class="text-reset">Tiny Cloud</a></h5>
+                    <button type="button" class="btn-close d-block d-lg-none" data-mdb-dismiss="offcanvas"></button>
+                </div>
+                <div class="offcanvas-body d-flex flex-column">
+                    <div class="nav flex-column nav-pills text-center mt-5" id="pillTabs">
+                        <button class="nav-link" id="storageTab" type="button" data-mdb-target="#storagePane">
+                            <i class="fa-solid fa-cloud me-2"></i>我的云盘
+                        </button>
+                        <button class="nav-link" id="historyTab" type="button" data-mdb-target="#historyPane">
+                            <i class="fa-solid fa-clock me-2"></i>传输历史
+                        </button>
+                        <button class="nav-link" id="binTab" type="button" data-mdb-target="#binPane">
+                            <i class="fa-solid fa-trash me-2"></i>回收站
+                        </button>
+                        <button class="nav-link d-none" id="profileTab" type="button" data-mdb-target="#profilePane">
+                        </button>
+                    </div>
+                    <div class="card mt-auto">
+                        <div class="card-body small text-muted">
+                            <i class="fa-solid fa-database me-2"></i>我的容量：
+                            <div id="capacity">
+                                <span></span> / <span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-lg-10 gx-0">
+            <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-1 top-navbar">
+                <div class="container-fluid">
+                    <button class="navbar-toggler" type="button" data-mdb-toggle="offcanvas" data-mdb-target="#sidebar">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="form-outline w-auto" id="search">
+                        <input type="search" id="searchInput" class="form-control form-icon-trailing"/>
+                        <label class="form-label" for="searchInput"></label>
+                        <i class="fa-solid fa-magnifying-glass trailing"></i>
+                    </div>
+                    <ul class="ms-auto navbar-nav flex-row align-items-center">
+                        <li class="nav-item me-3 me-lg-0">
+                            <a class="nav-link dropdown-toggle hidden-arrow" id="notice" href="javascript:void(0)"
+                               data-mdb-toggle="dropdown">
+                                <i class="fa-solid fa-bell"></i>
+                            </a>
+                            <ul class="dropdown-menu" style="width: 300px; max-height: 300px; overflow-y: auto"></ul>
+                        </li>
+                        <li class="nav-item me-3 me-lg-0">
+                            <a class="nav-link" href="javascript:void(0)">
+                                <i class="fa-solid fa-circle-question"></i>
+                            </a>
+                        </li>
+                        <li class="nav-item me-3 me-lg-0">
+                            <a class="nav-link" href="javascript:void(0)" id="avatar">
+                                <img class="avatar rounded-circle" src="" alt="avatar" height="25" width="25">
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+            <main class="container-fluid p-4" style="margin-top: 3.5rem">
+                <div class="tab-content">
+                    <section class="tab-pane fade" id="storagePane">
+                        <div id="storageToolbar" class="d-flex flex-wrap align-items-center">
+                            <nav>
+                                <ol class="breadcrumb mb-0" id="breadcrumb"></ol>
+                            </nav>
+                            <div class="ms-auto btn-group shadow-0">
+                                <div class="btn-group">
+                                    <button type="button" id="uploadBtn"
+                                            class="btn btn-light dropdown-toggle hidden-arrow"
+                                            data-mdb-toggle="dropdown">
+                                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                                               data-action="upload">上传文件</a>
+                                            <input type="file" class="action d-none" data-action="fileUpload">
+                                        </li>
+                                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                                               data-action="upload">上传文件夹</a>
+                                            <input type="file" class="action d-none" data-action="folderUpload"
+                                                   webkitdirectory>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button type="button" class="action btn btn-light" data-action="toggle">
+                                    <i class="fa-solid fa-grip"></i>
+                                </button>
+                                <button type="button" class="action btn btn-light" data-action="recycle">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                                <div class="btn-group">
+                                    <button type="button" id="storageMenu"
+                                            class="btn btn-light dropdown-toggle hidden-arrow"
+                                            data-mdb-toggle="dropdown" data-mdb-auto-close="false">
+                                        <i class="fa-solid fa-filter"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="action dropdown-item active" href="javascript:void(0)"
+                                               data-action="sort" data-sort="file_name" data-type="string">文件名</a></li>
+                                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                                               data-action="sort" data-sort="file_size" data-type="int">文件大小</a></li>
+                                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                                               data-action="sort" data-sort="create_time" data-type="date">上传时间</a></li>
+                                        <li>
+                                            <hr class="dropdown-divider"/>
+                                        </li>
+                                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                                               data-action="sort" data-order="">升序</a></li>
+                                        <li><a class="action dropdown-item active" href="javascript:void(0)"
+                                               data-action="sort" data-order="-">降序</a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <table id="storageTable"></table>
+                    </section>
+                    <section class="tab-pane fade" id="historyPane">
+                        <div id="historyToolbar" class="btn-group shadow-0">
+                            <button type="button" class="action btn btn-light"
+                                    data-action="remove"><i class="fa-solid fa-trash"></i>
+                            </button>
+                            <div class="btn-group">
+                                <button type="button" id="historyMenu"
+                                        class="btn btn-light dropdown-toggle hidden-arrow"
+                                        data-mdb-toggle="dropdown" data-mdb-auto-close="false">
+                                    <i class="fa-solid fa-filter"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="action dropdown-item active" href="javascript:void(0)"
+                                           data-action="sort" data-sort="create_time">创建时间</a></li>
+                                    <li><a class="action dropdown-item" href="javascript:void(0)"
+                                           data-action="sort" data-sort="expire_time">过期时间</a></li>
+                                    <li>
+                                        <hr class="dropdown-divider"/>
+                                    </li>
+                                    <li><a class="action dropdown-item" href="javascript:void(0)"
+                                           data-action="sort" data-order="">升序</a></li>
+                                    <li><a class="action dropdown-item active" href="javascript:void(0)"
+                                           data-action="sort" data-order="-">降序</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <table id="historyTable"></table>
+                    </section>
+                    <section class="tab-pane fade" id="binPane">
+                        <div id="binToolbar" class="btn-group shadow-0">
+                            <button type="button" class="action btn btn-light" data-action="remove">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                            <button type="button" class="action btn btn-light" data-action="recover">
+                                <i class="fa-solid fa-rotate-right"></i>
+                            </button>
+                            <div class="btn-group">
+                                <button type="button" id="binMenu" class="btn btn-light dropdown-toggle hidden-arrow"
+                                        data-mdb-toggle="dropdown" data-mdb-auto-close="false">
+                                    <i class="fa-solid fa-filter"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="action dropdown-item active" href="javascript:void(0)"
+                                           data-action="sort" data-sort="origin__file_name">文件名</a></li>
+                                    <li><a class="action dropdown-item" href="javascript:void(0)"
+                                           data-action="sort" data-sort="origin__file_size">文件大小</a></li>
+                                    <li><a class="action dropdown-item" href="javascript:void(0)"
+                                           data-action="sort" data-sort="create_time">删除时间</a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider"/>
+                                    </li>
+                                    <li><a class="action dropdown-item" href="javascript:void(0)"
+                                           data-action="sort" data-order="">升序</a>
+                                    </li>
+                                    <li><a class="action dropdown-item active" href="javascript:void(0)"
+                                           data-action="sort" data-order="-">降序</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <table id="binTable"></table>
+                    </section>
+                    <section class="tab-pane fade" id="profilePane">
+                        <div class="row gy-4">
+                            <div class="col-lg-5">
+                                <div class="card">
+                                    <div class="card-header h4">个人信息</div>
+                                    <div class="card-body">
+                                        <div class="bg-image hover-overlay mx-auto" style="width: 128px">
+                                            <img class="rounded-circle avatar" src=""
+                                                 height="128" width="128" alt="avatar">
+                                            <a class="action" href="javascript:void(0)" data-action="avatar">
+                                                <div class="mask rounded-circle"
+                                                     style="background-color: rgba(0, 0, 0, 0.2)">
+                                                </div>
+                                            </a>
+                                        </div>
+                                        <ul class="list-group list-group-light">
+                                            <li class="list-group-item border-0 d-flex flex-wrap">
+                                                <span class="me-auto">用户名：</span>
+                                                <span id="username"></span>
+                                            </li>
+                                            <li class="list-group-item border-0 d-flex flex-wrap">
+                                                <span class="me-auto">性别：</span>
+                                                <span id="gender"></span>
+                                            </li>
+                                            <li class="list-group-item border-0 d-flex flex-wrap">
+                                                <span class="me-auto">角色：</span>
+                                                <span id="role"></span>
+                                            </li>
+                                            <li class="list-group-item border-0 d-flex flex-wrap">
+                                                <span class="me-auto">电子邮箱：</span>
+                                                <span id="email"></span>
+                                            </li>
+                                            <li class="list-group-item border-0 d-flex flex-wrap">
+                                                <span class="me-auto">注册时间：</span>
+                                                <span id="date_joined"></span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-7">
+                                <div class="card">
+                                    <div class="card-header h4">其他信息</div>
+                                    <div class="card-body">
+                                        <div class="list-group list-group-light">
+                                            <div class="list-group-item px-3 border-0">
+                                                <div class="h5 mb-3">PRO信息</div>
+                                                <div class="row">
+                                                    <div class="col-lg-6">
+                                                        <p class="lead">普通用户</p>
+                                                        <p>存储空间：5GB</p>
+                                                        <p>多媒体预览限制：小于20MB</p>
+                                                    </div>
+                                                    <div class="col-lg-6">
+                                                        <p class="lead">会员用户</p>
+                                                        <p>存储空间：8GB</p>
+                                                        <p>多媒体预览限制：小于40MB</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button type="button"
+                                                    class="action list-group-item list-group-item-action px-3 border-0"
+                                                    data-action="password">
+                                                <span class="h5">修改密码</span>
+                                            </button>
+                                            <button type="button"
+                                                    class="action list-group-item list-group-item-action px-3 border-0"
+                                                    data-action="profile">
+                                                <span class="h5">修改其他</span>
+                                            </button>
+                                            <button type="button"
+                                                    class="action list-group-item list-group-item-action px-3 border-0"
+                                                    data-action="letter">
+                                                <span class="h5">留言申请</span>
+                                            </button>
+                                            <button type="button"
+                                                    class="action list-group-item list-group-item-action px-3 border-0"
+                                                    data-action="record">
+                                                <span class="h5">提交记录</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </main>
+        </div>
+    </div>
+</div>
+<div class="alert fade alert-warning alert-fixed d-flex align-items-center translate-middle start-50" id="alert"
+     style="top: -50%">
+    <i></i>
+    <div class="ms-2"></div>
+</div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast">
+        <div class="toast-header">
+            <i></i>
+            <button type="button" class="ms-auto btn-close" data-mdb-dismiss="toast"></button>
+        </div>
+        <div class="toast-body"></div>
+    </div>
+</div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="uploadToast" class="toast">
+        <div class="toast-header">
+            <i class="fas fa-info-circle text-info me-2"></i>
+            <span>上传进度</span>
+            <button type="button" class="ms-auto btn-close"></button>
+        </div>
+        <div class="toast-body">
+            <div class="progress" style="height: 1rem">
+                <div class="progress-bar bg-info rounded"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center">
+                <h5 class="mb-4 modal-title"></h5>
+                <div class="modal-btn">
+                    <button class="btn btn-secondary" data-mdb-dismiss="modal">取消</button>
+                    <button class="btn btn-danger">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="moveModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="height: 400px">
+            <div class="modal-header">
+                <h5 class="modal-title">移动文件</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="list-group list-group-light" id="folderList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-mdb-dismiss="modal">取消</button>
+                <button class="btn btn-primary" id="moveBtn">确认</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">链接设置</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-sm-6 border-end">
+                        <p>链接分享</p>
+                        <div class="bg-image mb-3 text-center">
+                            <div class="border rounded text-truncate">
+                                <small class="m-2" id="shareLink"></small>
+                            </div>
+                            <a href="javascript:void(0)" class="copy-mask">
+                                <div class="hover-overlay">
+                                    <div class="mask text-dark" style="background-color: white">复制</div>
+                                </div>
+                            </a>
+                        </div>
+                        <p>口令分享</p>
+                        <div class="bg-image mb-3 text-center">
+                            <div class="border rounded text-truncate">
+                                <small class="m-2" id="shareKey"></small>
+                            </div>
+                            <a href="javascript:void(0)" class="copy-mask">
+                                <div class="hover-overlay">
+                                    <div class="mask text-dark" style="background-color: white">复制</div>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="text-center mb-3">
+                            <button class="btn btn-primary text-center" id="copyBtn">一键复制</button>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <p>设置</p>
+                        <div class="d-flex align-items-center mb-3">
+                            <div>有效期</div>
+                            <button type="button" id="delta"
+                                    class="ms-auto btn btn-tertiary dropdown-toggle text-dark p-0"
+                                    data-mdb-ripple-color="light" data-mdb-toggle="dropdown" data-delta="7"
+                                    style="font-size: 1rem">
+                                7天
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item delta-item" data-delta="1" href="javascript:void(0)">1天</a>
+                                </li>
+                                <li><a class="dropdown-item delta-item" data-delta="7" href="javascript:void(0)">7天</a>
+                                </li>
+                                <li><a class="dropdown-item delta-item" data-delta="30"
+                                       href="javascript:void(0)">30天</a></li>
+                                <li><a class="dropdown-item delta-item" data-delta="999"
+                                       href="javascript:void(0)">永久有效</a></li>
+                            </ul>
+                        </div>
+                        <p>补充描述</p>
+                        <div class="mb-3">
+                            <div class="form-outline">
+                                <textarea class="form-control" id="summary" rows="3" maxlength="100"></textarea>
+                                <label class="form-label" for="summary">此信息将展示给收到的用户</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="avatarModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改头像</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <img class="w-100 avatar" src="" alt="avatar">
+                    </div>
+                    <div class="col-md-6">
+                        <div class="rounded-circle overflow-hidden m-auto preview"
+                             style="height: 200px; width: 200px"></div>
+                    </div>
+                </div>
+                <div class="row gy-2">
+                    <div class="col-md-2">
+                        <button type="button" class="action btn btn-light shadow-0" data-action="upload"
+                                data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="上传图片">
+                            <i class="fa-solid fa-upload"></i>
+                        </button>
+                        <input class="action d-none" type="file" accept="image/*" data-action="avatarUpload">
+                    </div>
+                    <div class="col-md-6 text-md-center">
+                        <button type="button" class="action btn btn-light shadow-0" data-action="rotateRight"
+                                data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="右转">
+                            <i class="fa-solid fa-rotate-right"></i>
+                        </button>
+                        <button type="button" class="action btn btn-light shadow-0" data-action="rotateLeft"
+                                data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="左转">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                        <button type="button" class="action btn btn-light shadow-0" data-action="zoomOut"
+                                data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="放大">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <button type="button" class="action btn btn-light shadow-0" data-action="zoomIn"
+                                data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="缩小">
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <button type="button" class="action btn btn-light shadow-0" data-action="reset"
+                                data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="重置">
+                            <i class="fa-solid fa-rotate"></i>
+                        </button>
+                        <button type="button" class="action btn btn-light shadow-0" data-action="confirm"
+                                data-mdb-toggle="tooltip" data-mdb-placement="bottom" title="确认">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改密码</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3" novalidate>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="password" id="password" name="password"
+                                   class="form-control" minlength="6" maxlength="150" required/>
+                            <label class="form-label" for="password">原始密码</label>
+                            <div class="invalid-feedback">长度大于6小于128</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="password" id="password1" name="password1"
+                                   class="form-control" minlength="6" maxlength="150" required/>
+                            <label class="form-label" for="password1">新密码</label>
+                            <div class="invalid-feedback">长度大于6小于128</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="password" id="password2" name="password2"
+                                   class="form-control" minlength="6" maxlength="150" required/>
+                            <label class="form-label" for="password2">确认密码</label>
+                            <div class="invalid-feedback">长度大于6小于128</div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="reset" class="btn btn-secondary">取消</button>
+                        <button type="button" class="btn btn-primary">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改信息</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-light" data-action="username" data-target="nameModal"
+                            data-url="user">修改用户名
+                    </button>
+                    <button type="button" class="btn btn-light" data-action="email" data-target="emailModal"
+                            data-url="user">修改邮箱
+                    </button>
+                    <button type="button" class="btn btn-light" data-action="gender" data-target="genderModal"
+                            data-url="profile">修改性别
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="nameModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改用户名</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3" novalidate>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="text" id="_username" name="username" class="form-control" maxlength="150" required>
+                            <label class="form-label" for="_username">用户名</label>
+                            <div class="invalid-feedback">不为空且长度小于150</div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="reset" class="btn btn-secondary">取消</button>
+                        <button type="button" class="btn btn-primary">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="emailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改邮箱</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3" novalidate>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="email" id="_email" name="email" class="form-control" required>
+                            <label class="form-label" for="_email">邮箱</label>
+                            <div class="invalid-feedback">请输入正确格式邮箱</div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="reset" class="btn btn-secondary">取消</button>
+                        <button type="button" class="btn btn-primary">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="genderModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改性别</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3" novalidate>
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input type="radio" class="form-check-input" name="gender" id="male" value="1" required>
+                            <label class="form-check-label" for="male">男</label>
+                            <div class="invalid-feedback">请选择正确的性别</div>
+                        </div>
+                        <div class="form-check">
+                            <input type="radio" class="form-check-input" name="gender" id="female" value="0" required>
+                            <label class="form-check-label" for="female">女</label>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="reset" class="btn btn-secondary">取消</button>
+                        <button type="button" class="btn btn-primary">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="letterModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">留言申请</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3" novalidate>
+                    <div class="col-12">
+                        <div class="btn-group shadow-0">
+                            <input type="radio" class="btn-check" name="action" id="message" value="0" checked>
+                            <label class="btn btn-secondary" for="message">留言</label>
+                            <input type="radio" class="btn-check" name="action" id="apply" value="1">
+                            <label class="btn btn-secondary" for="apply">申请</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <textarea class="form-control" id="content" name="content" rows="5" maxlength="100"
+                                      required></textarea>
+                            <label class="form-label" for="content">内容</label>
+                            <div class="invalid-feedback">内容不为空且小于100字符</div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="reset" class="btn btn-secondary">取消</button>
+                        <button type="button" class="btn btn-primary">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="recordModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">提交记录</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="nav nav-pills">
+                    <li class="nav-item">
+                        <a class="nav-link" data-mdb-toggle="tab" href="#messagePane">留言</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-mdb-toggle="tab" href="#applyPane">申请</a>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade" id="messagePane">
+                        <div class="list-group list-group-light"></div>
+                    </div>
+                    <div class="tab-pane fade" id="applyPane">
+                        <div class="list-group list-group-light"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<template id="cardTemplate">
+    <div class="col">
+        <div class="card">
+            <div class="bg-image ripple">
+                <div class="d-flex justify-content-center align-items-center m-2 p-5">
+                    <svg class="icon" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                         xmlns:xlink="http://www.w3.org/1999/xlink">
+                        <use xlink:href="#icon-%icon%"></use>
+                    </svg>
+                </div>
+                <a class="check" href="javascript:void (0)"
+                   data-index="%index%" data-type="%type%" data-uuid="%uuid%" data-name="%name%">
+                    <div class="mask">
+                        <div class="form-check m-3">
+                            <input class="d-none d-lg-block form-check-input rounded-2" type="checkbox"/>
+                        </div>
+                    </div>
+                    <div class="hover-overlay">
+                        <div class="mask" style="background-color: rgba(0, 0, 0, 0.2)"></div>
+                    </div>
+                </a>
+            </div>
+            <div class="card-footer d-flex align-items-center">
+                <div class="col-8 d-flex flex-column gy-1 small text-muted">
+                    <span class="text-muted text-truncate">%name%</span>
+                    <span class="text-muted">%size%</span>
+                </div>
+                <div class="ms-auto">
+                    <a class="action" href="javascript:void(0)"
+                       data-action="share" data-uuid="%uuid%">
+                        <i class="fa-solid fa-share-nodes"></i>
+                    </a>
+                    <a class="ms-3 dropdown-toggle hidden-arrow" href="javascript:void(0)"
+                       data-mdb-toggle="dropdown">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                               data-action="download" data-uuid="%uuid%">
+                            <i class="fa-solid fa-file-arrow-down me-2"></i>下载</a>
+                        </li>
+                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                               data-action="move" data-uuid="%uuid%">
+                            <i class="fa-solid fa-folder-open me-1"></i>移动</a>
+                        </li>
+                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                               data-action="recycle" data-uuid="%uuid%">
+                            <i class="fa-solid fa-trash me-2"></i>删除</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+<script src="{% static 'pan/vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'pan/vendor/mdb/mdb.min.js' %}"></script>
+<script src="{% static 'pan/vendor/bootstrap-table/bootstrap-table.min.js' %}"></script>
+<script src="{% static 'pan/vendor/bootstrap-table/bootstrap-table-custom-view.min.js' %}"></script>
+<script src="{% static 'pan/vendor/bootstrap-table/bootstrap-table-zh-CN.min.js' %}"></script>
+<script src="{% static 'pan/vendor/cropperjs/cropper.min.js' %}"></script>
+<script src="{% static 'pan/vendor/iconfont/iconfont.js' %}"></script>
+<script src="{% static 'pan/js/utils.js' %}"></script>
+<script src="{% static 'pan/js/config.js' %}"></script>
+<script src="{% static 'pan/js/main.js' %}"></script>
+</body>
+</html>
