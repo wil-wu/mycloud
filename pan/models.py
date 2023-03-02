@@ -14,15 +14,14 @@ def get_deleted_user():
     return User.objects.get_or_create(username='anonymous', defaults={'password': 'anonymous'})[0]
 
 
-def get_deleted_user_file():
+def get_deleted_file():
     return GenericFile.objects.get_or_create(
         file_name='anonymous',
         create_by=None,
         defaults={
             'file_uuid': get_uuid(),
-            'file_cate': '0',
             'file_size': 0,
-            'file_path': 'anonymous'
+            'is_del': True,
         }
     )[0]
 
@@ -39,21 +38,21 @@ def get_deleted_file_share():
         secret_key='anonymous',
         defaults={
             'signature': 'anonymous',
-            'user_file': get_deleted_user_file(),
+            'file': get_deleted_file(),
             'expire_time': timezone.now()
         }
     )[0]
 
 
 # 代理管理器
-class UserFileManager(models.Manager):
+class FileManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(file_cate='0')
+        return super().get_queryset().exclude(file_type=None)
 
 
-class UserDirManager(models.Manager):
+class FolderManager(models.Manager):
     def get_queryset(self):
-        return super().get_queryset().filter(file_cate='1')
+        return super().get_queryset().filter(file_type=None)
 
 
 class MessageManager(models.Manager):
@@ -61,19 +60,19 @@ class MessageManager(models.Manager):
         return super().get_queryset().filter(action='0')
 
 
-class ApprovalManager(models.Manager):
+class ApplyManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(action='1')
 
 
 class BaseModel(models.Model):
-    """基础字段"""
+    """基础模型"""
 
     create_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     update_time = models.DateTimeField(auto_now=True, verbose_name='更新时间')
-    create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), blank=True, null=True,
-                                  related_name='+', verbose_name='创建者')
-    update_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), blank=True, null=True,
+    create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), null=True, blank=True,
+                                  verbose_name='创建者')
+    update_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), null=True, blank=True,
                                   related_name='+', verbose_name='更新者')
     remark = models.TextField(blank=True, verbose_name='备注')
 
@@ -121,18 +120,32 @@ class RoleLimit(BaseModel):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return f'role: {self.role.role_key}, limit: {self.limit.limit_key}'
+        return f'角色：{self.role.role_name}，限制：{self.limit.limit_name}'
+
+
+class Notice(BaseModel):
+    """通知"""
+
+    title = models.CharField(max_length=50, verbose_name='标题')
+    content = models.TextField(verbose_name='通知内容')
+
+    class Meta:
+        verbose_name = '通知'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.title
 
 
 class Profile(BaseModel):
     """用户概要"""
 
-    create_by = None
-
     GENDER = [
         ('0', '女'),
         ('1', '男')
     ]
+
+    create_by = None
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, verbose_name='用户')
     avatar = models.ImageField(upload_to=get_unique_filename, default='default/user.svg', verbose_name='头像')
@@ -162,89 +175,91 @@ class FileType(BaseModel):
 
 
 class GenericFile(BaseModel):
-    """用户文件"""
-
-    CATEGORY = [
-        ('0', '文件'),
-        ('1', '文件夹')
-    ]
-
-    DEL_FLAGS = [
-        ('0', '未回收'),
-        ('1', '已回收'),
-    ]
+    """文件和文件夹"""
 
     create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name='files',
-                                  blank=True, null=True,
-                                  verbose_name='创建者')
+                                  null=True, blank=True, verbose_name='创建者')
 
     file_name = models.CharField(max_length=100, verbose_name='文件名')
     file_uuid = models.UUIDField(unique=True, default=get_uuid, verbose_name='文件编号')
-    file_cate = models.CharField(choices=CATEGORY, max_length=1, verbose_name='文件分类')
-    file_type = models.ForeignKey(FileType, blank=True, null=True, on_delete=models.SET(get_deleted_file_type),
-                                  verbose_name="文件类型")
+    file_type = models.ForeignKey(FileType, on_delete=models.SET(get_deleted_file_type), related_name='files',
+                                  null=True, blank=True, verbose_name="文件类型")
     file_size = models.BigIntegerField(default=0, verbose_name='文件大小(字节)')
     file_path = models.CharField(db_index=True, max_length=500, verbose_name="文件路径")
-    folder = models.ForeignKey('self', on_delete=models.CASCADE, to_field='file_uuid', null=True, blank=True,
-                               verbose_name="上级目录")
-    del_flag = models.CharField(max_length=1, default='0', choices=DEL_FLAGS, verbose_name='回收标识')
+    folder = models.ForeignKey('self', on_delete=models.CASCADE, to_field='file_uuid', related_name='files',
+                               null=True, blank=True, verbose_name="上级目录")
+    is_del = models.BooleanField(default=False, verbose_name='是否回收')
 
     class Meta:
-        ordering = ['-create_time']
-        verbose_name = '用户文件'
+        verbose_name = '文件和文件夹'
         verbose_name_plural = verbose_name
 
     def __str__(self):
         return self.file_name
 
 
-class UserFile(GenericFile):
+class File(GenericFile):
     """文件代理"""
-    objects = UserFileManager()
+    objects = FileManager()
 
     class Meta:
         proxy = True
-        verbose_name = '用户文件'
+        verbose_name = '文件'
         verbose_name_plural = verbose_name
 
 
-class UserDir(GenericFile):
+class Folder(GenericFile):
     """文件夹代理"""
-    objects = UserDirManager()
+    objects = FolderManager()
 
     class Meta:
         proxy = True
-        verbose_name = '用户文件夹'
+        verbose_name = '文件夹'
         verbose_name_plural = verbose_name
+
+
+class RecycleFile(BaseModel):
+    """回收的文件"""
+
+    create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name='recycle_files',
+                                  null=True, blank=True, verbose_name='创建者')
+    recycle_path = models.CharField(max_length=500, verbose_name="回收路径")
+    origin_path = models.CharField(max_length=500, verbose_name="回收路径")
+    origin = models.OneToOneField(GenericFile, on_delete=models.CASCADE, to_field='file_uuid',
+                                  related_name='recycle_file', null=True, blank=True, verbose_name="源文件")
+
+    class Meta:
+        verbose_name = '回收的文件'
+        verbose_name_plural = verbose_name
+
+    def __str__(self):
+        return self.create_by.username
 
 
 class FileShare(BaseModel):
     """文件分享记录"""
 
-    create_by = None
-
     secret_key = models.CharField(db_index=True, max_length=10, verbose_name='分享密匙')
     signature = models.CharField(max_length=70, verbose_name='数字签名')
-    user_file = models.ForeignKey(GenericFile, on_delete=models.CASCADE, verbose_name='文件')
+    file = models.ForeignKey(GenericFile, on_delete=models.CASCADE, to_field='file_uuid', verbose_name='文件')
     expire_time = models.DateTimeField(verbose_name='过期时间')
     summary = models.CharField(blank=True, max_length=100, verbose_name='分享补充描述')
 
     class Meta:
-        ordering = ['-create_time']
         verbose_name = '文件分享'
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return self.user_file.file_name
+        return self.file.file_name
 
 
-class ShareRecord(BaseModel):
+class AcceptRecord(BaseModel):
     """文件接收记录"""
 
-    create_by = None
+    create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name='accept_records',
+                                  null=True, blank=True, verbose_name='接收者')
 
     file_share = models.ForeignKey(FileShare, on_delete=models.SET(get_deleted_file_share), verbose_name='文件分享')
-    recipient = models.ForeignKey(User, null=True, on_delete=models.SET(get_deleted_user), verbose_name='接收者')
     anonymous = models.GenericIPAddressField(null=True, blank=True, verbose_name='匿名用户')
 
     class Meta:
@@ -252,71 +267,60 @@ class ShareRecord(BaseModel):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return self.file_share.user_file.file_name
+        return self.create_by.username if self.create_by else self.anonymous
 
 
-class Notice(BaseModel):
-    """通知"""
-
-    title = models.CharField(max_length=50, verbose_name='标题')
-    content = models.TextField(verbose_name='通知内容')
-
-    class Meta:
-        verbose_name = '通知'
-        verbose_name_plural = verbose_name
-
-    def __str__(self):
-        return self.title
-
-
-class Message(BaseModel):
-    """用户留言"""
+class Letter(BaseModel):
+    """留言和申请"""
 
     ACTIONS = [
         ('0', '留言'),
         ('1', '申请')
     ]
 
-    STATE = [
+    STATUS = [
         ('0', '未审批'),
         ('1', '通过'),
         ('2', '未通过')
     ]
 
+    create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name='letters',
+                                  null=True, blank=True, verbose_name='创建者')
+
     action = models.CharField(max_length=1, choices=ACTIONS, verbose_name='类型')
-    state = models.CharField(max_length=1, default='0', choices=STATE, verbose_name='状态')
-    content = models.TextField(verbose_name='留言内容')
+    status = models.CharField(max_length=1, default='0', choices=STATUS, verbose_name='状态')
+    content = models.TextField(verbose_name='内容')
 
     class Meta:
-        verbose_name = '留言'
+        verbose_name = '留言和申请'
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return self.create_by.username
+        return self.get_action_display()
 
 
-class UserMessage(Message):
+class Message(Letter):
     """留言代理"""
     objects = MessageManager()
 
     class Meta:
         proxy = True
-        verbose_name = '用户留言'
+        verbose_name = '留言'
         verbose_name_plural = verbose_name
 
 
-class UserApproval(Message):
+class Apply(Letter):
     """审核代理"""
-    objects = ApprovalManager()
+    objects = ApplyManager()
 
     class Meta:
         proxy = True
-        verbose_name = '用户申请'
+        verbose_name = '申请'
         verbose_name_plural = verbose_name
 
 
-class UserLog(models.Model):
-    """用户登录日志"""
+class AuthLog(models.Model):
+    """用户验证日志"""
 
     ACTIONS = [
         ('0', '登录'),
@@ -330,11 +334,11 @@ class UserLog(models.Model):
     os = models.CharField(max_length=30, verbose_name='操作系统')
     action = models.CharField(max_length=1, choices=ACTIONS, verbose_name='动作')
     msg = models.CharField(max_length=100, verbose_name='信息')
-    action_time = models.DateTimeField(auto_now_add=True, verbose_name='时间')
+    auth_time = models.DateTimeField(auto_now_add=True, verbose_name='时间')
 
     class Meta:
-        verbose_name = '用户登录日志'
+        verbose_name = '用户验证日志'
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return self.ipaddress
+        return self.username

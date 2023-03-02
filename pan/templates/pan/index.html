@@ -1,318 +1,207 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="zh">
+<!DOCTYPE html>{% load static %}
+<html lang="zh" class="h-100">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
-    <link href="{% static 'pan/css/common.css' %}" rel="stylesheet">
-    <title>首页 - Tiny Cloud</title>
+    <link href="{% static 'pan/vendor/mdb/mdb.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/vendor/font-awesome/all.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/css/style.css' %}" rel="stylesheet">
+    <title>首页</title>
     <style>
-        #introCarousel,
-        .carousel-inner,
-        .carousel-item,
-        .carousel-item.active {
-            height: 100vh;
-        }
-
-        .carousel-item:nth-child(1) {
-            background-image: url('{% static 'pan/image/mountain.jpg' %}');
-            background-repeat: no-repeat;
+        body {
+            background: url("{% static 'pan/img/mountain.jpg' %}") no-repeat center center fixed;
             background-size: cover;
-            background-position: center center;
-        }
-
-        .carousel-item:nth-child(2) {
-            background-image: url('{% static 'pan/image/lake.jpg' %}');
-            background-repeat: no-repeat;
-            background-size: cover;
-            background-position: center center;
-        }
-
-        #closeIcon {
-            pointer-events: auto;
-            cursor: pointer;
-            color: white;
-            transition: color 0.15s ease-in-out;
-        }
-
-        #closeIcon:hover {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        @media (min-width: 360px) {
-            #introCarousel {
-                margin-top: -58.59px;
-            }
         }
     </style>
 </head>
-<body>
-<header>
-    <nav class="navbar navbar-dark" style="z-index: 20;">
-        <div class="container-fluid align-items-center">
-            <a class="navbar-brand nav-link" href="/">
-                <strong>Cloud</strong>
-            </a>
-            <div class="navbar-nav flex-row align-items-center ms-auto">
-                {% if user.is_authenticated %}
-                    <a class="nav-link px-2" href="{% url 'pan:history' %}" data-mdb-toggle="tooltip"
-                       data-mdb-placement="bottom" title="传输历史">
-                        <i class="fas fa-history"></i>
-                    </a>
-                    <a class="nav-link px-2" href="{% url 'pan:cloud' %}" data-mdb-toggle="tooltip"
-                       data-mdb-placement="bottom" title="我的云盘">
-                        <i class="fas fa-cloud"></i>
-                    </a>
-                    <a class="nav-link px-2 dropdown-toggle d-flex align-items-center hidden-arrow" href=""
-                       id="navbarDropdownProfile"
-                       role="button" data-mdb-toggle="dropdown">
-                        <img class="rounded-circle" src="{{ user.profile.avatar.url }}" height="25" width="25"
+<body class="h-100">
+<div class="mask" style="background-color: rgba(0, 0, 0, 0.6)">
+    <nav class="navbar navbar-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand">Tiny Cloud</a>
+            <ul class="navbar-nav ms-auto" id="authLink">
+                <li class="nav-item">
+                    <a class="nav-link" href="javascript:void(0)"
+                       data-mdb-toggle="offcanvas" data-mdb-target="#authCanvas">登录 / 注册</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto flex-row align-items-center" id="navbar">
+                <li class="nav-item me-3">
+                    <a class="nav-link" href="{% url 'pan:home' %}#storage"><i class="fa-solid fa-cloud"></i></a>
+                </li>
+                <li class="nav-item me-3">
+                    <a class="nav-link" href="{% url 'pan:home' %}#history"><i class="fa-solid fa-clock"></i></a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link" href="javascript:void(0)" data-mdb-toggle="dropdown">
+                        <img class="rounded-circle" id="avatar" src="" height="25" width="25"
                              alt="avatar">
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
+                    <ul class="dropdown-menu">
                         <li>
-                            <a class="dropdown-item" href="{% url 'pan:profile' %}">个人信息</a>
+                            <a class="dropdown-item" href="{% url 'pan:home' %}#profile">个人信息</a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="{% url 'pan:logout' %}">退出登录</a>
+                            <a class="dropdown-item" id="logout" href="javascript:void(0)">退出登录</a>
                         </li>
                     </ul>
-                {% else %}
-                    <a class="nav-link px-2" id="loginLink" href="javascript:void (0)">登录</a>
-                    <a class="nav-link px-2" id="registerLink" href="javascript:void (0)">注册</a>
-                {% endif %}
-            </div>
+                </li>
+            </ul>
         </div>
     </nav>
-    <div id="introCarousel" class="carousel slide carousel-fade shadow-2-strong" data-mdb-ride="carousel"
-         data-mdb-interval="false">
-        <ol class="carousel-indicators">
-            <li data-mdb-target="#introCarousel" data-mdb-slide-to="0" class="active"></li>
-            <li data-mdb-target="#introCarousel" data-mdb-slide-to="1"></li>
-        </ol>
-        <div class="carousel-inner">
-            <div class="carousel-item active">
-                <div class="mask" style="background-color: rgba(0, 0, 0, 0.6);">
-                    <div class="d-flex justify-content-center align-items-center h-100">
-                        <div id="cloudBlock">{# 接收文件 #}
-                            <h1 class="text-white mb-5 text-center">立即探索</h1>
-                            <div id="shareCard" class="card" style="display: none; width: 18rem">
-                                <div class="card-header">
-                                    <i class="icon-link fas fa-times"></i>
-                                </div>
-                                <div class="card-body">
-                                    <div class="mb-2">
-                                        <h5 class="card-title file-title"></h5>
-                                        <small id="expire"></small>
-                                        <div id="summary" class="small text-muted" style="height: 6rem"></div>
-                                    </div>
-                                    <div class="d-flex border rounded p-2 mb-2">
-                                        <div class="me-2">
-                                            <svg class="icon" aria-hidden="true">
-                                                <use xlink:href="#icon-file_default"></use>
-                                            </svg>
-                                        </div>
-                                        <div class="flex-grow-1 text-muted text-truncate"
-                                             style="font-size: 0.5rem; line-height: 1rem">
-                                            <div class="file-title"></div>
-                                            <div id="fileSize"></div>
-                                        </div>
-                                    </div>
-                                    <a class="btn btn-info">下载</a>
-                                </div>
-                            </div>
-                            <div id="btnToggle" class="text-white text-center">
-                                <button class="m-2 btn btn-outline-light btn-lg" id="receiveBtn">接收文件</button>
-                            </div>
-                            <div id="inputToggle" style="display: none;">
-                                <div class="form-outline form-white">
-                                    <i id="closeIcon" class="fs-5 fas fa-times trailing"></i>
-                                    <input type="text" id="shareKey"
-                                           class="form-control form-control-lg form-icon-trailing"
-                                           maxlength="6" autocomplete="off"/>
-                                    <label class="form-label" for="shareKey">输入 6 位口令</label>
-                                </div>
-                            </div>
-                        </div>
-                        {# 接收文件 #}
-                    </div>
-                </div>
+    <div class="h-100 d-flex justify-content-center align-items-center">
+        <div id="shareCard" class="card" style="width: 18rem; display: none">
+            <div class="card-header">
+                <button type="button" class="float-end btn-close"></button>
             </div>
-            <div class="carousel-item">
-                <div class="mask" style="background-color: rgba(0, 0, 0, 0.6);">
-                    <div class="d-flex justify-content-center align-items-center h-100">
-                        <div class="text-white text-center">
-                            <h2>永远保持一颗谦逊的心，总是没错的</h2>
-                        </div>
+            <div class="card-body">
+                <h5 class="card-title file-name"></h5>
+                <div class="smaller" id="expiry"></div>
+                <p class="smaller" id="summary" style="height: 8rem"></p>
+                <div class="d-flex align-items-center border rounded p-2 mb-2">
+                    <svg class="icon" aria-hidden="true">
+                        <use xlink:href="#icon-file_default" xmlns="http://www.w3.org/2000/svg"
+                             xmlns:xlink="http://www.w3.org/1999/xlink">
+                        </use>
+                    </svg>
+                    <div class="ms-2 text-truncate smaller">
+                        <div class="file-name"></div>
+                        <div class="text-muted" id="size"></div>
                     </div>
                 </div>
+                <button type="button" class="btn btn-warning btn-rounded">下载</button>
             </div>
         </div>
-        <a class="carousel-control-prev" href="#introCarousel" role="button" data-mdb-slide="prev">
-            <span class="carousel-control-prev-icon"></span>
-        </a>
-        <a class="carousel-control-next" href="#introCarousel" role="button" data-mdb-slide="next">
-            <span class="carousel-control-next-icon"></span>
-        </a>
+        <div id="keyArea">
+            <h1 class="text-white text-center mb-5">立即探索</h1>
+            <div class="form-outline form-white" style="width: 15rem">
+                <input type="text" id="key" class="form-control form-control-lg form-icon-trailing" maxlength="6"
+                       autocomplete="off"/>
+                <label class="form-label" for="key">输入6位口令</label>
+                <i class="text-white fa-solid fa-key trailing"></i>
+            </div>
+        </div>
     </div>
-</header>
-{% if not user.is_authenticated %}
-    <main class="mt-5">
-        <div class="container">
-            <section class="mb-5" id="loginBlock">
-                <div class="row">
-                    <div class="col-md-6 mb-4">
-                        <div class="bg-image hover-overlay ripple shadow-2-strong rounded-5"
-                             data-mdb-ripple-color="light">
-                            <img src="{% static 'pan/image/coffee.jpg' %}" class="img-fluid" alt=""/>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h4 class="mb-5 text-center"><strong>登录</strong></h4>
-                        <div class="row d-flex justify-content-center">
-                            <div class="col-md-6">
-                                <form class="row gy-4 needs-validation" id="loginForm" novalidate>
-                                    <div class="col-12">
-                                        <div class="form-outline">
-                                            <input type="text" id="username" name="username" class="form-control"
-                                                   maxlength="150" pattern="^[\w.@+-_]+$" required/>
-                                            <label class="form-label" for="username">用户名</label>
-                                            <div class="invalid-feedback">
-                                                长度小于150；特殊字符'@'、'.'、'-'、'_'、'+'
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="form-outline">
-                                            <input type="password" id="password" name="password" class="form-control"
-                                                   minlength="6" maxlength="128" required/>
-                                            <label class="form-label" for="password">密码</label>
-                                            <div class="invalid-feedback">
-                                                长度大于6小于128
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12 d-flex justify-content-between">
-                                        <div class="form-check">
-                                            <input class="form-check-input me-2" id="remember" name="remember"
-                                                   type="checkbox" checked/>
-                                            <label class="form-check-label" for="remember">记住我</label>
-                                        </div>
-                                        <div>
-                                            <a href="javascript:void(0)" data-mdb-toggle="modal"
-                                               data-mdb-target="#resetModal">忘记密码？</a>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <button type="button" class="btn btn-primary btn-block" id="loginBtn">登录
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            <hr class="my-5">
-            <section class="mb-5" id="registerBlock">
-                <div class="row">
-                    <div class="col-md-6 order-md-1 order-2">
-                        <h4 class="mb-5 text-center"><strong>注册</strong></h4>
-                        <div class="row d-flex justify-content-center">
-                            <div class="col-md-6">
-                                <form class="row gy-4 needs-validation" id="registerForm" novalidate>
-                                    <div class="col-12">
-                                        <div class="form-outline">
-                                            <input type="text" id="registerUsername" name="username"
-                                                   class="form-control"
-                                                   maxlength="150" pattern="^[\w.@+-_]+$" required/>
-                                            <label class="form-label" for="registerUsername">用户名</label>
-                                            <div class="invalid-feedback">
-                                                长度小于150；特殊字符'@'、'.'、'-'、'_'、'+'
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="form-outline">
-                                            <input type="password" id="registerPassword" name="password"
-                                                   class="form-control" minlength="6" maxlength="128" required/>
-                                            <label class="form-label" for="registerPassword">密码</label>
-                                            <div class="invalid-feedback">
-                                                必填；长度大于6小于128
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="form-outline">
-                                            <input type="password" id="confirmPassword" name="confirmPassword"
-                                                   class="form-control" minlength="6" maxlength="128" required/>
-                                            <label class="form-label" for="confirmPassword">确认密码</label>
-                                            <div class="invalid-feedback">
-                                                必填；长度大于6小于128
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <button type="button" class="btn btn-primary btn-block" id="registerBtn">注册
-                                        </button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 mb-4 order-md-2 order-1">
-                        <div class="bg-image hover-overlay ripple shadow-2-strong rounded-5"
-                             data-mdb-ripple-color="light">
-                            <img src="{% static 'pan/image/nature.jpg' %}" class="img-fluid" alt=""/>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-    </main>
-    <div class="modal fade" id="resetModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">重置密码</h5>
-                    <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>填写用户名，我会给该用户绑定的邮箱发送一个验证邮件</p>
-                    <p class="text-muted small">注：收不到邮件请检查网络和邮箱的pop3/smtp服务是否开启</p>
-                    <form id="resetForm" novalidate>
+</div>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="authCanvas" data-mdb-scroll="true" data-mdb-backdrop="false">
+    <div class="offcanvas-header">
+        <button type="button" class="btn-close" data-mdb-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <ul class="nav nav-pills mb-5">
+            <li class="nav-item">
+                <a class="nav-link active" id="loginTab" data-mdb-toggle="pill" href="#signIn">登录</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-mdb-toggle="pill" href="#signUp">注册</a>
+            </li>
+        </ul>
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="signIn">
+                <form class="row g-4" data-url="login" novalidate>
+                    <div class="col-12">
                         <div class="form-outline">
-                            <input class="form-control" id="resetName" name="resetName" required>
-                            <label class="form-label" for="resetName">用户名</label>
-                            <div class="invalid-feedback">请输入验证信息</div>
+                            <input type="text" id="username" name="username" class="form-control"
+                                   maxlength="150" required/>
+                            <label class="form-label" for="username">用户名</label>
+                            <div class="invalid-feedback">不为空且长度小于150</div>
                         </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-mdb-dismiss="modal">取消</button>
-                    <button type="button" class="btn btn-primary" id="resetBtn">确认</button>
-                </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="password" id="password" name="password" class="form-control"
+                                   minlength="6" maxlength="128" required/>
+                            <label class="form-label" for="password">密码</label>
+                            <div class="invalid-feedback">长度大于6小于128</div>
+                        </div>
+                    </div>
+                    <div class="col-12 d-flex justify-content-between">
+                        <div class="form-check">
+                            <input class="form-check-input me-2" id="remember" name="remember"
+                                   type="checkbox" checked/>
+                            <label class="form-check-label" for="remember">记住我</label>
+                        </div>
+                        <a href="#resetModal" data-mdb-toggle="modal">忘记密码？</a>
+                    </div>
+                    <div class="col-12">
+                        <button type="button" class="btn btn-primary btn-block">登录</button>
+                    </div>
+                </form>
+            </div>
+            <div class="tab-pane fade" id="signUp">
+                <form class="row g-4" data-url="register" novalidate>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="text" id="_username" name="username"
+                                   class="form-control" maxlength="150" required/>
+                            <label class="form-label" for="_username">用户名</label>
+                            <div class="invalid-feedback">不为空且长度小于150</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="password" id="password1" name="password1"
+                                   class="form-control" minlength="6" maxlength="128" required/>
+                            <label class="form-label" for="password1">密码</label>
+                            <div class="invalid-feedback">长度大于6小于128</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="password" id="password2" name="password2"
+                                   class="form-control" minlength="6" maxlength="128" required/>
+                            <label class="form-label" for="password2">确认密码</label>
+                            <div class="invalid-feedback">长度大于6小于128</div>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <button type="button" class="btn btn-primary btn-block">注册</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
-{% endif %}
-<!-- 验证通知 -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
-    <div id="toast" class="toast fade hide">
+</div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast">
         <div class="toast-header">
-            <i class="fas fa-check-circle fa-lg text-success"></i>
+            <i></i>
             <button type="button" class="ms-auto btn-close" data-mdb-dismiss="toast"></button>
         </div>
         <div class="toast-body"></div>
     </div>
 </div>
-<!-- 验证通知 -->
-<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.js"></script>
-<script src="//at.alicdn.com/t/font_2926309_gvlwiirwihf.js"></script>
+<div class="modal fade" id="resetModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">重置密码</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>填写用户名，服务器会给该用户绑定的邮箱发送一个验证邮件</p>
+                <p class="text-muted small">注：收不到邮件请检查网络和邮箱的pop3/smtp服务是否开启</p>
+                <form class="row gy-3" data-url="reset" novalidate>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input class="form-control" id="resetName" name="username" maxlength="150" required>
+                            <label class="form-label" for="resetName">用户名</label>
+                            <div class="invalid-feedback">请输入正确用户名</div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="reset" class="btn btn-secondary">取消</button>
+                        <button type="button" class="btn btn-primary">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="{% static 'pan/vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'pan/vendor/mdb/mdb.min.js' %}"></script>
+<script src="{% static 'pan/vendor/iconfont/iconfont.js' %}"></script>
 <script src="{% static 'pan/js/utils.js' %}"></script>
 <script src="{% static 'pan/js/config.js' %}"></script>
 <script src="{% static 'pan/js/index.js' %}"></script>

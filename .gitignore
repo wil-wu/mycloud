@@ -161,4 +161,5 @@ cython_debug/
 
 # media
 media/pan
+media/bin
 media/uploads

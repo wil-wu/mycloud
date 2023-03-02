@@ -1,81 +1,73 @@
-{% load static %}
-<!DOCTYPE html>
+<!DOCTYPE html>{% load static %}
 <html lang="zh" class="h-100">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link href="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
-    <link href="{% static 'pan/css/common.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/vendor/mdb/mdb.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/css/style.css' %}" rel="stylesheet">
     <title>分享</title>
 </head>
 <body class="h-100">
-{% if not expired %}
-    <div class="position-fixed px-4 py-3">
-        <a href="/" class="text-reset"><i class="fas fa-chevron-left me-2"></i>返回首页</a>
-    </div>
-{% endif %}
 <div id="wrapper" class="d-flex justify-content-center align-items-center h-100">
-    {% if not expired %}
-        <div id="shareCard" class="card" style="width: 18rem">
-            <div class="card-header">
-                <i class="fas fa-cloud" style="color: #9E9E9E"></i>
-            </div>
-            <div class="card-body">
-                <div class="mb-2">
-                    <h5 class="card-title">{{ file.file_name }}</h5>
-                    <div class="small mb-1">{{ share.expire_time }}</div>
-                    <div class="text-muted small" style="height: 6rem">{{ share.summary }}</div>
+    <div class="card" style="width: 18rem; display: none">
+        <div class="card-body">
+            <h5 class="card-title file-name"></h5>
+            <div class="smaller" id="expiry"></div>
+            <p class="smaller" id="summary" style="height: 8rem"></p>
+            <div class="d-flex align-items-center border rounded p-2 mb-2">
+                <svg class="icon" aria-hidden="true">
+                    <use xlink:href="#icon-file_default" xmlns="http://www.w3.org/2000/svg"
+                         xmlns:xlink="http://www.w3.org/1999/xlink">
+                    </use>
+                </svg>
+                <div class="ms-2 text-truncate smaller">
+                    <div class="file-name"></div>
+                    <div class="text-muted" id="size"></div>
                 </div>
-                <div class="d-flex border rounded p-2 mb-2">
-                    <div class="me-2">
-                        <svg class="icon" aria-hidden="true">
-                            <use xlink:href="#icon-file_default"></use>
-                        </svg>
-                    </div>
-                    <div class="flex-grow-1 text-muted text-truncate" style="font-size: 0.5rem; line-height: 1rem">
-                        <div>{{ file.file_name }}</div>
-                        <div id="size">{{ file.file_size }}</div>
-                    </div>
-                </div>
-                <a class="btn btn-info">下载</a>
             </div>
+            <button type="button" class="btn btn-warning btn-rounded ">下载</button>
+            <a href="{% url 'pan:index' %}" class="btn btn-light btn-rounded ">回到主页</a>
         </div>
-    {% endif %}
+    </div>
 </div>
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
-    <div id="toast" class="toast fade hide">
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="toast" class="toast">
         <div class="toast-header">
-            <i class="fas fa-check-circle fa-lg text-success"></i>
+            <i></i>
             <button type="button" class="ms-auto btn-close" data-mdb-dismiss="toast"></button>
         </div>
         <div class="toast-body"></div>
     </div>
 </div>
-<script src="https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdn.bootcdn.net/ajax/libs/mdb-ui-kit/3.9.0/mdb.min.js"></script>
-<script src="//at.alicdn.com/t/font_2926309_gvlwiirwihf.js"></script>
+<script src="{% static 'pan/vendor/jquery/jquery.min.js' %}"></script>
+<script src="{% static 'pan/vendor/mdb/mdb.min.js' %}"></script>
+<script src="{% static 'pan/vendor/iconfont/iconfont.js' %}"></script>
 <script src="{% static 'pan/js/utils.js' %}"></script>
 <script src="{% static 'pan/js/config.js' %}"></script>
 <script>
-    $(document).ready(function () {
-        {% if expired %}
-            let dom = `<p>文件已过期</p><a class="btn btn-light btn-lg shadow-1" href="/">返回主页</a>`
-            $('#wrapper').html(custom.elEmpty(dom))
-        {% else %}
-            let toast = new custom.Toast($('#toast'))
-            let elem = $('#size')
-            let btn = $('.btn-info')
+    window.addEventListener('DOMContentLoaded', function () {
+        let key = domutil.getURLParam('key')
+        let wrapper = document.getElementById('wrapper')
+        let toast = new mdb.Toast(document.getElementById('toast'))
 
-            elem.text(custom.fileSizeFormat(Number(elem.text())))
-            btn.click(function () {
-                toast.setIcon('fas fa-info-circle text-info')
-                toast.setText('正在打包请稍等')
-                toast.getToast().show()
-                location.href = _urls.fileBlob('{{ file.file_uuid }}')
-            })
-        {% endif %}
+        $.get(_urls.shareSecret, {key: key}, (data, status, xhr) => {
+            if (xhr.status === 200) {
+                let card = wrapper.querySelector('.card')
+                card.querySelectorAll('.file-name').forEach((el) => el.textContent = data.file.file_name)
+                card.querySelector('#summary').textContent = data.summary
+                card.querySelector('#expiry').textContent = custom.humanizeTime(data.expire_time)
+                card.querySelector('#size').textContent = custom.fileSizeFormat(data.file.file_size)
+                card.querySelector('button').addEventListener('click', () => {
+                    location.href = _urls.fileBinary(data.file.file_uuid)
+                    toast.setIcon(_fontawsome.info).setText('正在打包请稍等').show()
+                })
+                card.style.setProperty('display', 'block')
+            } else {
+                let html = `<p>文件已过期</p><a class="btn btn-light btn-lg shadow-1" href="/">返回主页</a>`
+                wrapper.insertAdjacentHTML('beforeend', templates.elEmpty(html))
+            }
+        })
     })
 </script>
 </body>

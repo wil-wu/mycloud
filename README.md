@@ -1,7 +1,6 @@
 # mycloud
-My Graduation Project  
+大学毕业设计，一个美观简约，多功能的网盘web应用
 
-[演示网站 tiny cloud](https://cloudself.net)
 ### 本地运行
 ___
 1. 安装依赖
@@ -48,24 +47,50 @@ python manage.py createsuperuser
 ```
 python manage.py runserver
 ```
-### 页面截图
-___ 
-登录  
+### 功能模块
+___
+- 用户 
+  - 登录和注册
+  - 申请和留言 
+  - 查看站点通知
+  - 更改个人信息（头像，密码等）
+  - 查看，修改，删除共享文件记录
+  - 文件管理
+    - 上传，下载文件和文件夹
+    - 删除，恢复，移动文件和文件夹
+    - 设置有效期，分享文件和文件夹
+    - 检索文件
+    - 分类排序文件
+    - 预览文件
+    - 接受其他分享的文件
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/auth.png)  
+- 普通管理员
+  - 由管理员分配
+
+- 超级管理员
+  - 站点管理
+  - 日志管理
+  - 用户管理
+  - 角色权限管理 
+  - 发布通知
+  - 留言管理
+  - 申请审批
+
+### 页面截图
+___
 
 文件  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/main.jpeg)  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/storage.jpeg)  
 
 文件详情  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/detail.jpeg)  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/audio.jpeg)  
 
 个人信息  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/info.jpeg)  
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/profile.jpeg)  
 
 后台  
 
-![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/images/admin.jpeg)
+![screen shot](https://raw.githubusercontent.com/wil-wu/mycloud/master/screenshots/admin.jpeg)
