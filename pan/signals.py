@@ -21,8 +21,8 @@ def post_save_user(sender, instance, created, **kwargs):
         root = get_secret_path(instance.username.encode())
         GenericFile.objects.create(create_by=instance, file_name=root, file_path=root)
         RecycleFile.objects.create(create_by=instance, origin_path=root, recycle_path=root)
-        Path.mkdir(settings.PAN_ROOT / root)
-        Path.mkdir(settings.BIN_ROOT / root)
+        Path.mkdir(settings.PAN_ROOT / root, parents=True)
+        Path.mkdir(settings.BIN_ROOT / root, parents=True)
 
 
 # 用户日志
