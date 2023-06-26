@@ -245,7 +245,7 @@ class FolderUploadView(APIView):
             for part in parts:
                 part_path = temp_path / part
                 if Path(settings.PAN_ROOT / part_path).exists():
-                    prev = Folder.objects.get(file_path=part_path)
+                    prev = Folder.objects.get(file_path=part_path, is_del=False)
                     temp_folder = prev
                     temp_path = Path(part_path)
                 else:
@@ -280,7 +280,7 @@ class FolderUploadView(APIView):
 
         File.objects.bulk_create(objs)
         Folder.objects.bulk_update(dirs, ('file_size', 'update_by'))
-        folder = Folder.objects.get(file_path=folder_path)
+        folder = Folder.objects.get(file_path=folder_path, is_del=False)
 
         request.session['terms']['used'] = used
         return Response(FileSerializer(folder).data)
@@ -421,13 +421,11 @@ class FileViewSet(mixins.ListModelMixin,
             if folder is None:
                 folder = file.folder
             removed += file.file_size
-            rec_path = rec_root / (get_uuid() + Path(file.file_name).suffix)
+            rec_path = rec_root / get_uuid()
             (pan_root / file.file_path).rename(bin_root / rec_path)
             RecycleFile.objects.create(recycle_path=rec_path, origin_path=file.file_path,
                                        origin=file, create_by=request.user)
             recursive_update(file)
-
-        queryset.update(file_path='')
 
         while folder and folder.folder:
             folder.file_size -= removed
@@ -450,48 +448,22 @@ class FileViewSet(mixins.ListModelMixin,
         if dst_uuid == uuid:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
+        try:
+            dst = request.user.files.get(file_uuid=dst_uuid, file_type=None)
+        except GenericFile.DoesNotExist:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
         src = self.get_object()
-        dst = request.user.files.get(file_uuid=dst_uuid, file_type=None)
 
         if (settings.PAN_ROOT / dst.file_path / src.file_name).exists():
             result = AjaxData(400, msg='目标文件夹内存在同名文件')
             return Response(result)
 
-        objs = []
-        folders = []
-        src_folder = src.folder
-
         file_move(str(settings.PAN_ROOT / src.file_path), str(settings.PAN_ROOT / dst.file_path))
 
-        # 递归更新文件路径
-        def recursive_update(obj, parent):
-            obj.folder = parent
-            obj.file_path = Path(parent.file_path) / obj.file_name
-            obj.update_by = request.user
-            objs.append(obj)
+        src.folder = dst
+        src.save()
 
-            if obj.file_type is None:
-                files = GenericFile.objects.filter(folder=obj)
-                for f in files:
-                    recursive_update(f, obj)
-
-        recursive_update(src, dst)
-        GenericFile.objects.bulk_update(objs, ('folder', 'file_path', 'update_by'))
-
-        # 更新目的文件夹和原文件夹以及其父文件夹大小（除根目录）
-        while dst.folder:
-            dst.file_size += src.file_size
-            dst.update_by = request.user
-            folders.append(dst)
-            dst = dst.folder
-        while src_folder.folder:
-            src_folder.file_size -= src.file_size
-            src_folder.update_by = request.user
-            folders.append(src_folder)
-            src_folder = src_folder.folder
-
-        if folders:
-            Folder.objects.bulk_update(folders, ('file_size', 'update_by'))
         result = AjaxData(msg='成功移动文件')
         return Response(result)
 
@@ -544,8 +516,8 @@ class RecycleViewSet(mixins.ListModelMixin,
                 # 冲突处理
                 clash = True
                 conflict = True
-                rec_name = rec.origin.file_name
-                file_name = rec_name.partition('.')[0] + get_uuid() + ''.join(Path(rec_name).suffixes)
+                rec_part = rec.origin.file_name.partition('.')
+                file_name = rec_part[0] + get_uuid() + rec_part[2]
                 rec.origin.file_name = file_name
                 recursive_update(rec.origin, user_root)
                 Path(bin_root / rec.recycle_path).rename(pan_root / user_root.file_path / file_name)

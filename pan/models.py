@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -193,6 +195,58 @@ class GenericFile(BaseModel):
     class Meta:
         verbose_name = '文件和文件夹'
         verbose_name_plural = verbose_name
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        instance = super().from_db(db, field_names, values)
+        instance._loaded_values = dict(zip(field_names, values))
+        return instance
+
+    def save(self, force_insert=False, force_update=False, using=None,
+             update_fields=None):
+        """
+        定制save方法，文件更新传播
+        """
+        super().save(force_insert, force_update, using, update_fields)
+        if hasattr(self, '_loaded_values'):
+            if self.folder_id != self._loaded_values['folder_id']:
+                objs = []
+                folders = []
+
+                def recursive_update(obj, parent):
+                    obj.file_path = Path(parent.file_path) / obj.file_name
+                    objs.append(obj)
+                    if obj.file_type is None:
+                        for sub in GenericFile.objects.filter(folder=obj):
+                            recursive_update(sub, obj)
+                recursive_update(self, self.folder)
+
+                dst = self.folder
+                src = GenericFile.objects.get(file_uuid=self._loaded_values['folder_id'])
+                while dst.folder:
+                    dst.file_size += self.file_size
+                    folders.append(dst)
+                    dst = dst.folder
+                while src.folder:
+                    src.file_size -= self.file_size
+                    folders.append(src)
+                    src = src.folder
+
+                GenericFile.objects.bulk_update(objs, ('file_path',))
+                GenericFile.objects.bulk_update(folders, ('file_size',))
+
+            if self.file_name != self._loaded_values['file_name']:
+                objs = []
+
+                def recursive_update(obj, parent):
+                    obj.file_path = Path(parent.file_path) / obj.file_name
+                    objs.append(obj)
+                    if obj.file_type is None:
+                        for sub in GenericFile.objects.filter(folder=obj):
+                            recursive_update(sub, obj)
+                recursive_update(self, self.folder)
+
+                GenericFile.objects.bulk_update(objs, ('file_path',))
 
     def __str__(self):
         return self.file_name

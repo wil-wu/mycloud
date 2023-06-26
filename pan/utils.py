@@ -7,7 +7,6 @@ from io import BytesIO
 from pathlib import Path
 
 from django.core.signing import Signer
-from django.utils import timezone, dateformat
 
 
 # 全局唯一标识
@@ -30,7 +29,7 @@ def get_secret_path(msg):
 
 # 生成唯一文件名
 def get_unique_filename(instance, filename):
-    return f"uploads/{dateformat.format(timezone.localdate(), 'Y/m/d')}/{get_uuid()}{Path(filename).suffix}"
+    return f"uploads/{instance.user.id}/{get_uuid()}{Path(filename).suffix}"
 
 
 # 计算文件夹大小
