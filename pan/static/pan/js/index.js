@@ -88,13 +88,9 @@ window.addEventListener('DOMContentLoaded', function () {
         let inputs = form.querySelectorAll('input')
         let validation = custom.getInitial(form)
 
-        inputs.forEach((input) => {
-            input.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') btn.click()
-            })
-        })
+        form.addEventListener('submit', (evt) => {
+            evt.preventDefault()
 
-        btn.addEventListener('click', () => {
             if (!form.checkValidity()) {
                 custom.setInitial(form, validation)
             } else {
