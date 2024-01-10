@@ -50,7 +50,7 @@ window.addEventListener('DOMContentLoaded', function () {
         // 判断文件合法性
         for (const [key, formats] of Object.entries(_config.media)) {
             if (formats.has(file.type)) {
-                if (file.file_size > _config.terms[key]) {
+                if (file.file_size > _config.terms.preview) {
                     let permEl = document.getElementById('notPermission')
                     let btn = permEl.querySelector('button')
 

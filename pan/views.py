@@ -371,7 +371,7 @@ class FileViewSet(mixins.ListModelMixin,
 
     @action(methods=['GET'], detail=True, permission_classes=[permissions.AllowAny])
     def binary(self, request, uuid=None):
-        file = self.get_object()
+        file = GenericFile.objects.get(file_uuid=uuid, is_del=False)
         root = settings.PAN_ROOT
 
         if file.file_type is not None:
