@@ -209,20 +209,20 @@ class GenericFile(BaseModel):
         """
         super().save(force_insert, force_update, using, update_fields)
         if hasattr(self, '_loaded_values'):
+            objs = []
+
+            def recursive_update(obj, parent):
+                obj.file_path = Path(parent.file_path) / obj.file_name
+                objs.append(obj)
+                if obj.file_type is None:
+                    for sub in GenericFile.objects.filter(folder=obj):
+                        recursive_update(sub, obj)
+
             if self.folder_id != self._loaded_values['folder_id']:
-                objs = []
                 folders = []
-
-                def recursive_update(obj, parent):
-                    obj.file_path = Path(parent.file_path) / obj.file_name
-                    objs.append(obj)
-                    if obj.file_type is None:
-                        for sub in GenericFile.objects.filter(folder=obj):
-                            recursive_update(sub, obj)
-                recursive_update(self, self.folder)
-
                 dst = self.folder
                 src = GenericFile.objects.get(file_uuid=self._loaded_values['folder_id'])
+
                 while dst.folder:
                     dst.file_size += self.file_size
                     folders.append(dst)
@@ -232,20 +232,13 @@ class GenericFile(BaseModel):
                     folders.append(src)
                     src = src.folder
 
-                GenericFile.objects.bulk_update(objs, ('file_path',))
+                recursive_update(self, self.folder)
                 GenericFile.objects.bulk_update(folders, ('file_size',))
 
             if self.file_name != self._loaded_values['file_name']:
-                objs = []
-
-                def recursive_update(obj, parent):
-                    obj.file_path = Path(parent.file_path) / obj.file_name
-                    objs.append(obj)
-                    if obj.file_type is None:
-                        for sub in GenericFile.objects.filter(folder=obj):
-                            recursive_update(sub, obj)
                 recursive_update(self, self.folder)
 
+            if objs:
                 GenericFile.objects.bulk_update(objs, ('file_path',))
 
     def __str__(self):
@@ -287,7 +280,7 @@ class RecycleFile(BaseModel):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return self.create_by.username
+        return self.origin.file_name
 
 
 class FileShare(BaseModel):

@@ -1,6 +1,7 @@
 from pathlib import Path
 from datetime import timedelta
 from shutil import rmtree, move as file_move
+from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.auth import login, logout
@@ -13,6 +14,7 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.db import transaction
 from django.http import FileResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -30,7 +32,7 @@ from pan.serializers import (
     LoginSerializer, RegisterSerializer, PasswordSerializer, ProfileSerializer, UserSerializer,
     NoticeSerializer, LetterSerializer, FileSerializer, RecycleSerializer, FileShareSerializer
 )
-from pan.utils import AjaxData, get_key_signature, get_dir_size, make_archive_bytes, get_uuid
+from pan.utils import AjaxData, get_key_signature, make_archive_bytes, get_uuid
 
 
 @method_decorator(ensure_csrf_cookie, 'get')
@@ -183,27 +185,29 @@ class FileUploadView(APIView):
         if used > request.session['terms']['storage']:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        parent = request.user.files.get(file_uuid=request.data.get('parent', request.session['root']))
+        parent = folder = request.user.files.get(file_uuid=request.data.get('parent', request.session['root']))
         file_path = Path(parent.file_path) / file.name
         if Path(file_path).exists():
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix, defaults={'type_name': '未知'})[0]
-        dirs = []
-
-        with open(settings.PAN_ROOT / file_path, 'wb') as f:
-            for chunk in file.chunks():
-                f.write(chunk)
-        user_file = File.objects.create(file_name=file.name, file_type=file_type, file_size=file.size,
-                                        file_path=file_path, folder=parent, create_by=request.user)
+        folder_list = []
 
         # 更新父文件夹大小
-        while parent:
-            parent.file_size += file.size
-            parent.update_by = request.user
-            dirs.append(parent)
-            parent = parent.folder
-        Folder.objects.bulk_update(dirs, ('file_size', 'update_by'))
+        while folder:
+            folder.file_size += file.size
+            folder.update_by = request.user
+            folder_list.append(folder)
+            folder = folder.folder
+
+        # 开启事务，保证数据完整性
+        with transaction.atomic():
+            file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix, defaults={'type_name': '未知'})[0]
+            user_file = File.objects.create(file_name=file.name, file_type=file_type, file_size=file.size,
+                                            file_path=file_path, folder=parent, create_by=request.user)
+            Folder.objects.bulk_update(folder_list, ('file_size', 'update_by'))
+            with open(settings.PAN_ROOT / file_path, 'wb') as f:
+                for chunk in file.chunks():
+                    f.write(chunk)
 
         request.session['terms']['used'] = used
         return Response(FileSerializer(user_file).data)
@@ -230,58 +234,62 @@ class FolderUploadView(APIView):
 
         parent = request.user.files.get(file_uuid=request.data.get('parent', request.session['root']))
         parent_path = Path(parent.file_path)
-        folder_path = parent_path / name
-        if Path(folder_path).exists():
+        if (parent_path / name).exists():
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        objs = []
-        dirs = []
+        file_list = []
+        folder_list = []
+        folder_dict = defaultdict(int)
 
-        for i in range(path_nums):
-            # 递归创建目录
-            parts = Path(paths[i]).parts[:-1]
-            temp_folder = parent
-            temp_path = parent_path
-            for part in parts:
-                part_path = temp_path / part
-                if Path(settings.PAN_ROOT / part_path).exists():
-                    prev = Folder.objects.get(file_path=part_path, is_del=False)
-                    temp_folder = prev
-                    temp_path = Path(part_path)
-                else:
-                    prev = Folder(file_name=part, file_path=part_path, folder=temp_folder, create_by=request.user)
-                    prev.save()
-                    dirs.append(prev)
-                    Path.mkdir(settings.PAN_ROOT / part_path)
-                    temp_folder = prev
-                    temp_path = Path(part_path)
-            # 创建文件
-            file = files[i]
-            file_path = temp_path / file.name
-            with open(settings.PAN_ROOT / file_path, 'wb') as f:
-                for chunk in file.chunks():
-                    f.write(chunk)
-            file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix,
-                                                       defaults={'type_name': '未知'})[0]
-            objs.append(File(file_name=file.name, file_type=file_type, file_size=file.size,
-                             file_path=file_path, folder=temp_folder, create_by=request.user))
+        # 开启事务，保证数据完整性
+        with transaction.atomic():
+            for i in range(path_nums):
+                relative_path = Path(paths[i])
+                parts = relative_path.parts[:-1]
+                parents = list(reversed(relative_path.parents))[1:]
+                temp_folder = parent
+                # 逐级创建目录
+                for j in range(len(parts)):
+                    part_path = parent_path / parents[j]
+                    part_folder = Folder.objects.get_or_create(file_path=part_path, is_del=False, defaults={
+                        'file_name': parts[j],
+                        'folder': temp_folder,
+                        'create_by': request.user,
+                    })[0]
+                    temp_folder = part_folder
+                # 创建文件对象
+                file = files[i]
+                file_path = parent_path / paths[i]
+                file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix,
+                                                           defaults={'type_name': '未知'})[0]
+                file_list.append(File(file_name=file.name, file_type=file_type, file_size=file.size,
+                                      file_path=file_path, folder=temp_folder, create_by=request.user))
 
-        # 计算文件大小并更新数据库
-        for d in dirs:
-            d.file_size = get_dir_size(settings.PAN_ROOT / d.file_path)
-            d.update_by = request.user
+            # 计算父文件夹大小
+            for item in file_list:
+                folder = item.folder
+                while folder:
+                    folder_dict[folder] += item.file_size
+                    folder = folder.folder
 
-        while parent:
-            parent.file_size = get_dir_size(settings.PAN_ROOT / parent_path)
-            parent.update_by = request.user
-            dirs.append(parent)
-            parent = parent.folder
-            parent_path = parent.file_path if parent else None
+            for item, size in folder_dict.items():
+                item.file_size += size
+                item.update_by = request.user
+                folder_list.append(item)
 
-        File.objects.bulk_create(objs)
-        Folder.objects.bulk_update(dirs, ('file_size', 'update_by'))
-        folder = Folder.objects.get(file_path=folder_path, is_del=False)
+            File.objects.bulk_create(file_list)
+            Folder.objects.bulk_update(folder_list, ('file_size', 'update_by'))
 
+            # 创建目录与文件
+            for i in range(path_nums):
+                file = files[i]
+                path = settings.PAN_ROOT / parent_path / Path(paths[i]).parent
+                Path(path).mkdir(parents=True, exist_ok=True)
+                with open(path / file.name, 'wb') as f:
+                    for chunk in file.chunks():
+                        f.write(chunk)
+
+        folder = Folder.objects.get(file_path=parent_path / name, is_del=False)
         request.session['terms']['used'] = used
         return Response(FileSerializer(folder).data)
 
@@ -398,10 +406,11 @@ class FileViewSet(mixins.ListModelMixin,
         except ValidationError:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        removed = 0
-        folder = None
-        folders = []
-        objs = []
+        folder_dict = defaultdict(int)
+        folder_list = []
+        rename_list = []
+        refile_list = []
+        obj_list = []
         pan_root = settings.PAN_ROOT
         bin_root = settings.BIN_ROOT
         rec_root = Path(RecycleFile.objects.get(pk=request.session['rec_root']).recycle_path)
@@ -410,33 +419,46 @@ class FileViewSet(mixins.ListModelMixin,
         def recursive_update(obj):
             obj.is_del = True
             obj.update_by = request.user
-            objs.append(obj)
+            obj_list.append(obj)
 
             if obj.file_type is None:
                 files = GenericFile.objects.filter(folder=obj)
                 for f in files:
                     recursive_update(f)
 
+        # 处理回收文件
         for file in queryset:
-            if folder is None:
-                folder = file.folder
-            removed += file.file_size
+            if file.folder.folder_id:
+                folder_dict[file.folder] += file.file_size
             rec_path = rec_root / get_uuid()
-            (pan_root / file.file_path).rename(bin_root / rec_path)
-            RecycleFile.objects.create(recycle_path=rec_path, origin_path=file.file_path,
-                                       origin=file, create_by=request.user)
             recursive_update(file)
+            rename_list.append((pan_root / file.file_path, bin_root / rec_path))
+            refile_list.append(RecycleFile(recycle_path=rec_path, origin_path=file.file_path,
+                                           origin=file, create_by=request.user))
 
-        while folder and folder.folder:
-            folder.file_size -= removed
-            folder.update_by = request.user
-            folders.append(folder)
+        # 重新计算父文件夹大小(根目录除外)
+        for folder, size in tuple(folder_dict.items()):
             folder = folder.folder
+            while folder.folder:
+                folder_dict[folder] += size
+                folder = folder.folder
 
-        if folders:
-            Folder.objects.bulk_update(folders, ('file_size', 'update_by'))
-        if objs:
-            GenericFile.objects.bulk_update(objs, ('is_del', 'update_by'))
+        # 更新父文件夹大小
+        for folder, size in folder_dict.items():
+            folder.file_size -= size
+            folder.update_by = request.user
+            folder_list.append(folder)
+
+        # 开启事务，保证数据完整性
+        with transaction.atomic():
+            if refile_list:
+                RecycleFile.objects.bulk_create(refile_list)
+            if folder_list:
+                GenericFile.objects.bulk_update(folder_list, ('file_size', 'update_by'))
+            if obj_list:
+                GenericFile.objects.bulk_update(obj_list, ('is_del', 'update_by'))
+            for item in rename_list:
+                item[0].rename(item[1])
 
         result = AjaxData(msg='成功回收所选文件')
         return Response(result)
@@ -489,14 +511,14 @@ class RecycleViewSet(mixins.ListModelMixin,
         except ValueError:
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        folders = []
-        folder_dict = {}
-        objs = []
-        clash = False
+        folder_dict = defaultdict(int)
+        folder_list = []
+        rename_list = []
+        obj_list = []
         conflict = False
         pan_root = settings.PAN_ROOT
         bin_root = settings.BIN_ROOT
-        user_root = Folder.objects.get(file_uuid=request.session['root'])
+        usr_root = Folder.objects.get(file_uuid=request.session['root'])
 
         # 递归更新子文件
         def recursive_update(obj, parent):
@@ -504,52 +526,57 @@ class RecycleViewSet(mixins.ListModelMixin,
             obj.folder = parent
             obj.file_path = Path(parent.file_path) / obj.file_name
             obj.update_by = request.user
-            objs.append(obj)
+            obj_list.append(obj)
 
             if obj.file_type is None:
                 files = GenericFile.objects.filter(folder=obj)
                 for f in files:
                     recursive_update(f, obj)
 
+        # 处理回收文件
         for rec in queryset:
             if (pan_root / rec.origin_path).exists() or not (pan_root / rec.origin.folder.file_path).exists():
                 # 冲突处理
                 clash = True
                 conflict = True
-                rec_part = rec.origin.file_name.partition('.')
-                file_name = rec_part[0] + get_uuid() + rec_part[2]
+                rec_name = Path(rec.origin.file_name)
+                file_name = rec_name.stem + get_uuid() + rec_name.suffix
                 rec.origin.file_name = file_name
-                recursive_update(rec.origin, user_root)
-                Path(bin_root / rec.recycle_path).rename(pan_root / user_root.file_path / file_name)
+                recursive_update(rec.origin, usr_root)
+                rename_list.append((bin_root / rec.recycle_path, pan_root / usr_root.file_path / file_name))
             else:
+                clash = False
                 recursive_update(rec.origin, rec.origin.folder)
-                Path(bin_root / rec.recycle_path).rename(pan_root / rec.origin_path)
+                rename_list.append((bin_root / rec.recycle_path, pan_root / rec.origin_path))
 
-            folder = rec.origin.folder
-            if folder in folder_dict:
-                if not clash:
-                    folder_dict[folder] += rec.origin.file_size
-            else:
-                if not clash:
-                    folder_dict[folder] = rec.origin.file_size
+            if not clash and rec.origin.folder.folder_id:
+                folder_dict[rec.origin.folder] += rec.origin.file_size
 
-        queryset.delete()
+        # 重新计算父文件夹大小(根目录除外)
+        for folder, size in tuple(folder_dict.items()):
+            folder = folder.folder
+            while folder.folder:
+                folder_dict[folder] += size
+                folder = folder.folder
 
         # 更新父文件夹
         for folder, size in folder_dict.items():
-            while folder and folder.folder:
-                folder.file_size += size
-                folder.update_by = request.user
-                folders.append(folder)
-                folder = folder.folder
+            folder.file_size += size
+            folder.update_by = request.user
+            folder_list.append(folder)
 
-        if folders:
-            Folder.objects.bulk_update(folders, ('file_size', 'update_by'))
-        if objs:
-            GenericFile.objects.bulk_update(objs, ('file_name', 'is_del', 'folder', 'file_path', 'update_by'))
+        # 开启事务，保证数据完整性
+        with transaction.atomic():
+            if folder_list:
+                GenericFile.objects.bulk_update(folder_list, ('file_size', 'update_by'))
+            if obj_list:
+                GenericFile.objects.bulk_update(obj_list, ('file_name', 'is_del', 'folder', 'file_path', 'update_by'))
+            queryset.delete()
+            for item in rename_list:
+                item[0].rename(item[1])
 
         if conflict:
-            msg = '所选文件中原文件夹不存在或存在同名文件，已随机命名打包存放置根目录下'
+            msg = '所选文件中原文件夹不存在或存在同名文件，已随机命名存放置根目录下'
         else:
             msg = '成功恢复所选文件'
         result = AjaxData(msg=msg)
@@ -568,21 +595,30 @@ class RecycleViewSet(mixins.ListModelMixin,
 
         removed = 0
         uuids = []
+        file_list = []
+        folder_list = []
         bin_root = settings.BIN_ROOT
 
+        # 处理回收文件
         for rec in queryset:
             removed += rec.origin.file_size
             uuids.append(rec.origin.file_uuid)
+            rec_path = bin_root / rec.recycle_path
             if rec.origin.file_type is None:
-                rmtree(bin_root / rec.recycle_path)
+                folder_list.append(rec_path)
             else:
-                (bin_root / rec.recycle_path).unlink()
+                file_list.append(rec_path)
 
-        GenericFile.objects.filter(file_uuid__in=uuids).delete()
-
-        root = Folder.objects.get(file_uuid=request.session['root'])
-        root.file_size -= removed
-        root.save()
+        # 开启事务，保证数据完整性
+        with transaction.atomic():
+            GenericFile.objects.filter(file_uuid__in=uuids).delete()
+            root = Folder.objects.get(file_uuid=request.session['root'])
+            root.file_size -= removed
+            root.save()
+            for folder in folder_list:
+                rmtree(folder)
+            for file in file_list:
+                file.unlink()
 
         request.session['terms']['used'] -= removed
         result = AjaxData(msg='成功删除所选文件')
