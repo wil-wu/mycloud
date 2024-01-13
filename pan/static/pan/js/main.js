@@ -156,8 +156,8 @@ window.addEventListener('DOMContentLoaded', function () {
         if (options.breadcrumb) options.breadcrumb.dispose()
         $(options.toolbar).find('.action').off('click change')
 
-        $search.addClass('d-none')
-        $search.children(':first').off('input keypress')
+        $search.addClass('d-none').off('submit')
+        $search.children(':first').off('input')
         $table.bootstrapTable('destroy')
     }
 
@@ -257,26 +257,25 @@ window.addEventListener('DOMContentLoaded', function () {
         })
 
         // 搜索
-        $search.removeClass('d-none')
-            .children(':first')
-            .on('input', function () {
-                if (!this.value) {
-                    $storageTable.bootstrapTable('refresh', {
-                        url: _urls.storage,
-                        query: {parent: breadcrumb.last, ordering: storageMenu.getOrdering()},
-                    })
-                }
-            })
-            .on('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    if (this.value) {
-                        $storageTable.bootstrapTable('refresh', {
-                            url: _urls.files,
-                            query: {search: this.value, ordering: storageMenu.getOrdering()},
-                        })
-                    }
-                }
-            }).next().text('在云盘中搜索')
+        let $input = $search.children(':first')
+        $search.removeClass('d-none').on("submit", function (e) {
+            e.preventDefault()
+            let val = $input.val().trim()
+            if (val) {
+                $storageTable.bootstrapTable('refresh', {
+                    url: _urls.files,
+                    query: {search: val, ordering: storageMenu.getOrdering()},
+                })
+            }
+        })
+        $input.on('input', function () {
+            if (!this.value) {
+                $storageTable.bootstrapTable('refresh', {
+                    url: _urls.storage,
+                    query: {parent: breadcrumb.last, ordering: storageMenu.getOrdering()},
+                })
+            }
+        }).next().text('在云盘中搜索')
 
         // 工具栏绑定
         $($storageTable.bootstrapTable('getOptions').toolbar).find('.action').each((i, el) => {
@@ -743,32 +742,30 @@ window.addEventListener('DOMContentLoaded', function () {
         })
 
         // 搜索
-        $search.removeClass('d-none')
-            .children(':first')
-            .on('input', function () {
-                if (!this.value) {
-                    $historyTable.bootstrapTable('refreshOptions', {
-                        queryParams: (params) => {
-                            params.ordering = historyMenu.getOrdering()
-                            return params
-                        }
-                    })
-                }
-            })
-            .on('keypress', function (e) {
-                if (e.key === 'Enter') {
-                    let value = this.value
-                    if (value) {
-                        $historyTable.bootstrapTable('refreshOptions', {
-                            queryParams: (params) => {
-                                params.search = value
-                                params.ordering = historyMenu.getOrdering()
-                                return params
-                            }
-                        })
+        let $input = $search.children(':first')
+        $search.removeClass('d-none').on('submit', function (e) {
+            e.preventDefault()
+            let val = $input.val().trim()
+            if (val) {
+                $historyTable.bootstrapTable('refreshOptions', {
+                    queryParams: (params) => {
+                        params.search = val
+                        params.ordering = historyMenu.getOrdering()
+                        return params
                     }
-                }
-            }).next().text('在传输历史中搜索')
+                })
+            }
+        })
+        $input.on('input', function () {
+            if (!this.value) {
+                $historyTable.bootstrapTable('refreshOptions', {
+                    queryParams: (params) => {
+                        params.ordering = historyMenu.getOrdering()
+                        return params
+                    }
+                })
+            }
+        }).next().text('在传输历史中搜索')
 
         // 工具栏功能绑定
         $($historyTable.bootstrapTable('getOptions').toolbar).find('.action').each((i, el) => {
@@ -938,32 +935,30 @@ window.addEventListener('DOMContentLoaded', function () {
         })
 
         // 搜索
-        $search.removeClass('d-none')
-            .children(':first')
-            .on('input', function () {
-                if (!this.value) {
-                    $binTable.bootstrapTable('refreshOptions', {
-                        queryParams: (params) => {
-                            params.ordering = binMenu.getOrdering()
-                            return params
-                        }
-                    })
-                }
-            })
-            .on('keypress', function (e) {
-                if (e.which === 13) {
-                    let value = this.value
-                    if (value) {
-                        $binTable.bootstrapTable('refreshOptions', {
-                            queryParams: (params) => {
-                                params.search = value
-                                params.ordering = binMenu.getOrdering()
-                                return params
-                            }
-                        })
+        let $input = $search.children(':first')
+        $search.removeClass('d-none').on('submit', function (e) {
+            e.preventDefault()
+            let val = $input.val().trim()
+            if (val) {
+                $binTable.bootstrapTable('refreshOptions', {
+                    queryParams: (params) => {
+                        params.search = val
+                        params.ordering = binMenu.getOrdering()
+                        return params
                     }
-                }
-            }).next().text('在回收站中搜索')
+                })
+            }
+        })
+        $input.on('input', function () {
+            if (!this.value) {
+                $binTable.bootstrapTable('refreshOptions', {
+                    queryParams: (params) => {
+                        params.ordering = binMenu.getOrdering()
+                        return params
+                    }
+                })
+            }
+        }).next().text('在回收站中搜索')
 
         // 工具栏功能绑定
         $($binTable.bootstrapTable('getOptions').toolbar).find('.action').each((i, el) => {
