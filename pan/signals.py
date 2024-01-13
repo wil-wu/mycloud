@@ -1,8 +1,9 @@
 from pathlib import Path
+from shutil import rmtree
 
 from django.conf import settings
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_delete
 from django.contrib.auth.signals import user_logged_in, user_logged_out, user_login_failed
 from django.contrib.auth.models import User
 
@@ -23,6 +24,32 @@ def post_save_user(sender, instance, created, **kwargs):
         RecycleFile.objects.create(create_by=instance, origin_path=root, recycle_path=root)
         Path(settings.PAN_ROOT / root).mkdir(parents=True)
         Path(settings.BIN_ROOT / root).mkdir(parents=True)
+
+
+# 删除文件数据同时删除源文件
+@receiver(pre_delete, sender=GenericFile, dispatch_uid="pre_delete_file")
+def pre_delete_file(sender, instance, **kwargs):
+    if instance.folder is None:
+        raise PermissionError('forbidden')
+    path = settings.PAN_ROOT / instance.file_path
+    if path.exists():
+        if instance.file_type is None:
+            rmtree(path)
+        else:
+            path.unlink()
+
+
+# 删除回收文件数据同时删除源文件
+@receiver(pre_delete, sender=RecycleFile, dispatch_uid="pre_delete_refile")
+def pre_delete_refile(sender, instance, **kwargs):
+    if instance.origin.folder is None:
+        raise PermissionError('forbidden')
+    path = settings.BIN_ROOT / instance.recycle_path
+    if path.exists():
+        if instance.origin.file_type is None:
+            rmtree(path)
+        else:
+            path.unlink()
 
 
 # 用户日志

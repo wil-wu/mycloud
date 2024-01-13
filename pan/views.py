@@ -1,6 +1,5 @@
 from pathlib import Path
 from datetime import timedelta
-from shutil import rmtree, move as file_move
 from collections import defaultdict
 
 from django.conf import settings
@@ -25,7 +24,7 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from pan.models import (
-    GenericFile, RecycleFile, File, Folder, FileType,
+    GenericFile, RecycleFile, FileType,
     FileShare, AcceptRecord, Notice, Profile
 )
 from pan.serializers import (
@@ -202,9 +201,9 @@ class FileUploadView(APIView):
         # 开启事务，保证数据完整性
         with transaction.atomic():
             file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix, defaults={'type_name': '未知'})[0]
-            user_file = File.objects.create(file_name=file.name, file_type=file_type, file_size=file.size,
-                                            file_path=file_path, folder=parent, create_by=request.user)
-            Folder.objects.bulk_update(folder_list, ('file_size', 'update_by'))
+            user_file = GenericFile.objects.create(file_name=file.name, file_type=file_type, file_size=file.size,
+                                                   file_path=file_path, folder=parent, create_by=request.user)
+            GenericFile.objects.bulk_update(folder_list, ('file_size', 'update_by'))
             with open(settings.PAN_ROOT / file_path, 'wb') as f:
                 for chunk in file.chunks():
                     f.write(chunk)
@@ -251,7 +250,7 @@ class FolderUploadView(APIView):
                 # 逐级创建目录
                 for j in range(len(parts)):
                     part_path = parent_path / parents[j]
-                    part_folder = Folder.objects.get_or_create(file_path=part_path, is_del=False, defaults={
+                    part_folder = GenericFile.objects.get_or_create(file_path=part_path, is_del=False, defaults={
                         'file_name': parts[j],
                         'folder': temp_folder,
                         'create_by': request.user,
@@ -262,8 +261,8 @@ class FolderUploadView(APIView):
                 file_path = parent_path / paths[i]
                 file_type = FileType.objects.get_or_create(suffix=Path(file.name).suffix,
                                                            defaults={'type_name': '未知'})[0]
-                file_list.append(File(file_name=file.name, file_type=file_type, file_size=file.size,
-                                      file_path=file_path, folder=temp_folder, create_by=request.user))
+                file_list.append(GenericFile(file_name=file.name, file_type=file_type, file_size=file.size,
+                                             file_path=file_path, folder=temp_folder, create_by=request.user))
 
             # 计算父文件夹大小
             for item in file_list:
@@ -277,8 +276,8 @@ class FolderUploadView(APIView):
                 item.update_by = request.user
                 folder_list.append(item)
 
-            File.objects.bulk_create(file_list)
-            Folder.objects.bulk_update(folder_list, ('file_size', 'update_by'))
+            GenericFile.objects.bulk_create(file_list)
+            GenericFile.objects.bulk_update(folder_list, ('file_size', 'update_by'))
 
             # 创建目录与文件
             for i in range(path_nums):
@@ -289,7 +288,7 @@ class FolderUploadView(APIView):
                     for chunk in file.chunks():
                         f.write(chunk)
 
-        folder = Folder.objects.get(file_path=parent_path / name, is_del=False)
+        folder = GenericFile.objects.get(file_path=parent_path / name, is_del=False)
         request.session['terms']['used'] = used
         return Response(FileSerializer(folder).data)
 
@@ -481,8 +480,6 @@ class FileViewSet(mixins.ListModelMixin,
             result = AjaxData(400, msg='目标文件夹内存在同名文件')
             return Response(result)
 
-        file_move(str(settings.PAN_ROOT / src.file_path), str(settings.PAN_ROOT / dst.file_path))
-
         src.folder = dst
         src.save()
 
@@ -518,7 +515,7 @@ class RecycleViewSet(mixins.ListModelMixin,
         conflict = False
         pan_root = settings.PAN_ROOT
         bin_root = settings.BIN_ROOT
-        usr_root = Folder.objects.get(file_uuid=request.session['root'])
+        usr_root = GenericFile.objects.get(file_uuid=request.session['root'])
 
         # 递归更新子文件
         def recursive_update(obj, parent):
@@ -571,9 +568,9 @@ class RecycleViewSet(mixins.ListModelMixin,
                 GenericFile.objects.bulk_update(folder_list, ('file_size', 'update_by'))
             if obj_list:
                 GenericFile.objects.bulk_update(obj_list, ('file_name', 'is_del', 'folder', 'file_path', 'update_by'))
-            queryset.delete()
             for item in rename_list:
                 item[0].rename(item[1])
+            queryset.delete()
 
         if conflict:
             msg = '所选文件中原文件夹不存在或存在同名文件，已随机命名存放置根目录下'
@@ -595,30 +592,18 @@ class RecycleViewSet(mixins.ListModelMixin,
 
         removed = 0
         uuids = []
-        file_list = []
-        folder_list = []
-        bin_root = settings.BIN_ROOT
 
         # 处理回收文件
         for rec in queryset:
             removed += rec.origin.file_size
             uuids.append(rec.origin.file_uuid)
-            rec_path = bin_root / rec.recycle_path
-            if rec.origin.file_type is None:
-                folder_list.append(rec_path)
-            else:
-                file_list.append(rec_path)
 
         # 开启事务，保证数据完整性
         with transaction.atomic():
             GenericFile.objects.filter(file_uuid__in=uuids).delete()
-            root = Folder.objects.get(file_uuid=request.session['root'])
+            root = GenericFile.objects.get(file_uuid=request.session['root'])
             root.file_size -= removed
             root.save()
-            for folder in folder_list:
-                rmtree(folder)
-            for file in file_list:
-                file.unlink()
 
         request.session['terms']['used'] -= removed
         result = AjaxData(msg='成功删除所选文件')

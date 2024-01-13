@@ -1,6 +1,8 @@
 from pathlib import Path
+from shutil import move
 
 from django.db import models
+from django.conf import settings
 from django.utils import timezone
 from django.contrib.auth.models import User
 
@@ -47,16 +49,6 @@ def get_deleted_file_share():
 
 
 # 代理管理器
-class FileManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().exclude(file_type=None)
-
-
-class FolderManager(models.Manager):
-    def get_queryset(self):
-        return super().get_queryset().filter(file_type=None)
-
-
 class MessageManager(models.Manager):
     def get_queryset(self):
         return super().get_queryset().filter(action='0')
@@ -115,7 +107,7 @@ class RoleLimit(BaseModel):
 
     role = models.ForeignKey(Role, on_delete=models.CASCADE, verbose_name='角色')
     limit = models.ForeignKey(Limit, on_delete=models.CASCADE, verbose_name='限制')
-    value = models.BigIntegerField(verbose_name='值')
+    value = models.BigIntegerField(default=0, verbose_name='值')
 
     class Meta:
         verbose_name = '角色限制'
@@ -177,7 +169,7 @@ class FileType(BaseModel):
 
 
 class GenericFile(BaseModel):
-    """文件和文件夹"""
+    """文件(文件夹)"""
 
     create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name='files',
                                   null=True, blank=True, verbose_name='创建者')
@@ -193,7 +185,7 @@ class GenericFile(BaseModel):
     is_del = models.BooleanField(default=False, verbose_name='是否回收')
 
     class Meta:
-        verbose_name = '文件和文件夹'
+        verbose_name = '文件'
         verbose_name_plural = verbose_name
 
     @classmethod
@@ -223,6 +215,8 @@ class GenericFile(BaseModel):
                 dst = self.folder
                 src = GenericFile.objects.get(file_uuid=self._loaded_values['folder_id'])
 
+                move(str(settings.PAN_ROOT / self.file_path), str(settings.PAN_ROOT / dst.file_path))
+
                 while dst.folder:
                     dst.file_size += self.file_size
                     folders.append(dst)
@@ -245,33 +239,13 @@ class GenericFile(BaseModel):
         return self.file_name
 
 
-class File(GenericFile):
-    """文件代理"""
-    objects = FileManager()
-
-    class Meta:
-        proxy = True
-        verbose_name = '文件'
-        verbose_name_plural = verbose_name
-
-
-class Folder(GenericFile):
-    """文件夹代理"""
-    objects = FolderManager()
-
-    class Meta:
-        proxy = True
-        verbose_name = '文件夹'
-        verbose_name_plural = verbose_name
-
-
 class RecycleFile(BaseModel):
     """回收的文件"""
 
     create_by = models.ForeignKey(User, on_delete=models.SET(get_deleted_user), related_name='recycle_files',
                                   null=True, blank=True, verbose_name='创建者')
     recycle_path = models.CharField(max_length=500, verbose_name="回收路径")
-    origin_path = models.CharField(max_length=500, verbose_name="回收路径")
+    origin_path = models.CharField(max_length=500, verbose_name="原路径")
     origin = models.OneToOneField(GenericFile, on_delete=models.CASCADE, to_field='file_uuid',
                                   related_name='recycle_file', null=True, blank=True, verbose_name="源文件")
 
@@ -280,7 +254,7 @@ class RecycleFile(BaseModel):
         verbose_name_plural = verbose_name
 
     def __str__(self):
-        return self.origin.file_name
+        return self.origin.file_name if self.origin else '-'
 
 
 class FileShare(BaseModel):
