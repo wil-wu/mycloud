@@ -4,7 +4,7 @@ from django.utils.translation import ngettext
 
 from pan.utils import file_size_format
 from pan.models import (Profile, Role, Limit, RoleLimit,
-                        FileType, GenericFile, File, Folder, RecycleFile, FileShare, AcceptRecord,
+                        FileType, GenericFile, RecycleFile, FileShare, AcceptRecord,
                         Notice, Letter, Message, Apply, AuthLog)
 
 
@@ -114,13 +114,13 @@ class LimitAdmin(admin.ModelAdmin):
 class RoleLimitAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
-            'fields': ('role', 'limit', 'value')
+            'fields': ('role', 'limit', 'value', 'format_value')
         }),
         ('其他信息', {
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
-    readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
+    readonly_fields = ('format_value', 'create_by', 'create_time', 'update_by', 'update_time')
     list_select_related = ('role', 'limit')
     list_display = ('role', 'limit', 'format_value')
     list_filter = ('role', 'limit')
@@ -165,33 +165,19 @@ class FileTypeAdmin(admin.ModelAdmin):
 
 @admin.register(GenericFile)
 class GenericFile(admin.ModelAdmin):
-    search_fields = ('file_name',)
-
-    def get_model_perms(self, request):
-        return {}
-
-    def get_search_results(self, request, queryset, search_term):
-        if request.GET.get('model_name') == 'fileshare':
-            return super().get_search_results(request, queryset, search_term)
-        queryset = queryset.filter(file_type=None)
-        return super().get_search_results(request, queryset, search_term)
-
-
-@admin.register(File)
-class FileAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
-            'fields': ('file_uuid', 'file_name', 'file_type', 'file_size', 'file_path', 'folder', 'is_del')
+            'fields': ('file_uuid', 'file_name', 'format_type', 'format_size', 'folder', 'format_status')
         }),
         ('其他信息', {
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
-    autocomplete_fields = ('folder', 'file_type')
     search_fields = ('file_name', 'create_by__username')
-    readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
+    readonly_fields = ('file_uuid', 'file_name', 'format_type', 'format_size', 'folder', 'format_status',
+                       'create_by', 'create_time', 'update_by', 'update_time')
     list_select_related = ('create_by', 'file_type')
-    list_display = ('file_name', 'file_type', 'format_size', 'is_del', 'create_by')
+    list_display = ('file_name', 'format_type', 'format_size', 'format_status', 'create_by')
     list_filter = ('file_type', 'is_del')
     list_per_page = 10
 
@@ -199,35 +185,16 @@ class FileAdmin(admin.ModelAdmin):
     def format_size(self, obj):
         return file_size_format(obj.file_size)
 
-    def has_add_permission(self, request):
-        return False
+    @admin.display(description='文件类型')
+    def format_type(self, obj):
+        return obj.file_type.suffix if obj.file_type else '文件夹'
 
-    def save_model(self, request, obj, form, change):
-        obj.update_by = request.user
-        super().save_model(request, obj, form, change)
+    @admin.display(boolean=True, description='文件状态')
+    def format_status(self, obj):
+        return not obj.is_del
 
-
-@admin.register(Folder)
-class FolderAdmin(admin.ModelAdmin):
-    fieldsets = (
-        (None, {
-            'fields': ('file_uuid', 'file_name', 'file_size', 'file_path', 'folder', 'is_del')
-        }),
-        ('其他信息', {
-            'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
-        })
-    )
-    autocomplete_fields = ('folder',)
-    search_fields = ('file_name', 'create_by__username')
-    readonly_fields = ('file_uuid', 'create_by', 'create_time', 'update_by', 'update_time')
-    list_select_related = ('create_by',)
-    list_display = ('file_name', 'format_size', 'is_del', 'create_by')
-    list_filter = ('is_del',)
-    list_per_page = 10
-
-    @admin.display(ordering='file_size', description='文件大小')
-    def format_size(self, obj):
-        return file_size_format(obj.file_size)
+    def get_queryset(self, request):
+        return super().get_queryset(request).exclude(folder=None)
 
     def has_add_permission(self, request):
         return False
@@ -241,7 +208,7 @@ class FolderAdmin(admin.ModelAdmin):
 class RecycleFileAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
-            'fields': ('recycle_path', 'origin_path', 'origin')
+            'fields': ('origin',)
         }),
         ('其他信息', {
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
@@ -252,6 +219,9 @@ class RecycleFileAdmin(admin.ModelAdmin):
     list_select_related = ('origin', 'create_by')
     list_display = ('origin', 'create_by', 'create_time')
     list_per_page = 10
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).exclude(origin=None)
 
     def has_add_permission(self, request):
         return False
@@ -271,9 +241,9 @@ class FileShareAdmin(admin.ModelAdmin):
             'fields': ('create_by', 'create_time', 'update_by', 'update_time', 'remark')
         })
     )
-    autocomplete_fields = ('file',)
     search_fields = ('create_by__username', 'file__file_name')
-    readonly_fields = ('secret_key', 'signature', 'create_by', 'create_time', 'update_by', 'update_time')
+    readonly_fields = ('secret_key', 'signature', 'expire_time', 'file', 'summary',
+                       'create_by', 'create_time', 'update_by', 'update_time')
     list_select_related = ('file',)
     list_display = ('file', 'create_time', 'expire_time')
     list_filter = ('file__file_type',)
@@ -298,7 +268,7 @@ class AcceptRecordAdmin(admin.ModelAdmin):
         })
     )
     search_fields = ('create_by__username',)
-    readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
+    readonly_fields = ('file_share', 'anonymous', 'create_by', 'create_time', 'update_by', 'update_time')
     list_select_related = ('file_share', 'create_by')
     list_display = ('file_share', 'create_by', 'anonymous')
     list_filter = ('file_share__file__file_type',)
@@ -340,6 +310,9 @@ class NoticeAdmin(admin.ModelAdmin):
 @admin.register(Letter)
 class LetterAdmin(admin.ModelAdmin):
 
+    def has_module_permission(self, request):
+        return False
+
     def get_model_perms(self, request):
         return {}
 
@@ -355,7 +328,7 @@ class MessageAdmin(admin.ModelAdmin):
         })
     )
     search_fields = ('create_by__username',)
-    readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
+    readonly_fields = ('content', 'create_by', 'create_time', 'update_by', 'update_time')
     list_select_related = ('create_by',)
     list_display = ('create_by', 'create_time')
     list_per_page = 10
@@ -379,7 +352,7 @@ class ApplyAdmin(admin.ModelAdmin):
         })
     )
     search_fields = ('create_by__username',)
-    readonly_fields = ('create_by', 'create_time', 'update_by', 'update_time')
+    readonly_fields = ('content', 'create_by', 'create_time', 'update_by', 'update_time')
     actions = (make_pass, make_not_pass)
     list_select_related = ('create_by',)
     list_filter = ('status',)
@@ -404,7 +377,9 @@ class ApplyAdmin(admin.ModelAdmin):
 
 @admin.register(AuthLog)
 class AuthLogAdmin(admin.ModelAdmin):
+    fields = ('username', 'ipaddress', 'browser', 'os', 'action', 'auth_time', 'msg')
     search_fields = ('username',)
+    readonly_fields = ('username', 'ipaddress', 'browser', 'os', 'action', 'auth_time')
     list_display = ('username', 'ipaddress', 'browser', 'os', 'action', 'auth_time')
     list_filter = ('action',)
     list_per_page = 15
