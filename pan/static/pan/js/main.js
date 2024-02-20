@@ -2,22 +2,22 @@ window.addEventListener('DOMContentLoaded', function () {
     'use strict'
 
     // 必要组件和对象
-    const storageTab = new mdb.Tab(document.getElementById('storageTab'))
-    const historyTab = new mdb.Tab(document.getElementById('historyTab'))
-    const binTab = new mdb.Tab(document.getElementById('binTab'))
-    const profileTab = new mdb.Tab(document.getElementById('profileTab'))
+    const storageTab = new mdb.Tab('#storageTab')
+    const historyTab = new mdb.Tab('#historyTab')
+    const binTab = new mdb.Tab('#binTab')
+    const profileTab = new mdb.Tab('#profileTab')
 
-    const alert = new mdb.Alert(document.getElementById('alert'))
-    const toast = new mdb.Toast(document.getElementById('toast'))
-    const modal = new mdb.Modal(document.getElementById('modal'))
+    const alert = new mdb.Alert('#alert')
+    const toast = new mdb.Toast('#toast')
+    const modal = new mdb.Modal('#modal')
 
-    const storageMenu = new mdb.Dropdown(document.getElementById('storageMenu')).activate()
-    const historyMenu = new mdb.Dropdown(document.getElementById('historyMenu')).activate()
-    const binMenu = new mdb.Dropdown(document.getElementById('binMenu')).activate()
+    const storageMenu = new mdb.Dropdown('#storageMenu').activate()
+    const historyMenu = new mdb.Dropdown('#historyMenu').activate()
+    const binMenu = new mdb.Dropdown('#binMenu').activate()
 
-    const notice = new mdb.Dropdown(document.getElementById('notice'))
+    const notice = new mdb.Dropdown('#notice')
 
-    const sidebar = new mdb.Offcanvas(document.getElementById('sidebar'))
+    const sidebar = new mdb.Offcanvas('#sidebar')
 
     const $storageTable = $('#storageTable')
     const $historyTable = $('#historyTable')
@@ -90,7 +90,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
     mappingPage()
 
-    document.getElementById('avatar').addEventListener('click', () => profileTab._element.click())
+    document.querySelector('#avatar').addEventListener('click', () => profileTab._element.click())
 
     // 侧边栏
     window.innerWidth >= _config.BREAK_POINT ? sidebar.show() : sidebar.hide()
@@ -193,14 +193,15 @@ window.addEventListener('DOMContentLoaded', function () {
 
     // 初始化存储表格
     function initStorageTable() {
-        let breadcrumb = new mdb.Breadcrumb(
-            document.getElementById('breadcrumb'),
-            ['我的云盘'],
-            [() => $storageTable.bootstrapTable('refresh', {
+        const checkFn = getCheckFn()
+
+        const breadcrumb = new mdb.BreadCrumb('#breadcrumb', (uuid) => {
+            $storageTable.bootstrapTable('refresh', {
                 url: _urls.storage,
-                query: {ordering: storageMenu.getOrdering()}
-            })]
-        )
+                query: {parent: uuid, ordering: storageMenu.getOrdering()}
+            })
+        })
+        breadcrumb.append('我的云盘')
 
         $storageTable.bootstrapTable({
             url: _urls.storage,
@@ -214,10 +215,7 @@ window.addEventListener('DOMContentLoaded', function () {
             customViewDefaultView: true,
             customView: customView,
             onToggleCustomView: () => $storageTable.bootstrapTable('uncheckAll'),
-            onCustomViewPostBody: () => {
-                checkAction()
-                customViewAction()
-            },
+            onCustomViewPostBody: customViewEvents,
             queryParams: (params) => {
                 params.ordering = storageMenu.getOrdering()
                 return params
@@ -272,7 +270,7 @@ window.addEventListener('DOMContentLoaded', function () {
             if (!this.value) {
                 $storageTable.bootstrapTable('refresh', {
                     url: _urls.storage,
-                    query: {parent: breadcrumb.last, ordering: storageMenu.getOrdering()},
+                    query: {parent: breadcrumb.get(-1).dataset.uuid, ordering: storageMenu.getOrdering()},
                 })
             }
         }).next().text('在云盘中搜索')
@@ -319,124 +317,141 @@ window.addEventListener('DOMContentLoaded', function () {
             if (data.length === 0) {
                 return templates.elEmpty(`<p>使用工具栏上传文件</p>`)
             }
-            let template = document.getElementById('cardTemplate').innerHTML
+            let template = document.querySelector('#cardTemplate').innerHTML
             let view = ''
-            let index = 0
-            for (const row of data) {
+            for (let index = 0; index < data.length; index++) {
+                let row = data[index]
                 view += template
-                    .replace('%index%', index)
+                    .replace(/%index%/g, index)
                     .replace(/%uuid%/g, row.file_uuid)
                     .replace(/%name%/g, row.file_name)
                     .replace('%type%', row.file_type)
                     .replace('%size%', custom.fileSizeFormat(row.file_size))
                     .replace('%icon%', _iconfont[row.file_type])
-                index += 1
             }
-            return `<div class="row g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">${view}</div>`
+            return `<div id="card-container" class="row g-3 row-cols-1 row-cols-md-2 row-cols-lg-3 row-cols-xl-4">${view}</div>`
         }
 
         // 自定义视图事件
-        function customViewAction() {
-            let customViewEl = document.querySelector('.fixed-table-custom-view')
+        function customViewEvents() {
+            let cardContainer = document.querySelector('#card-container')
+            if (!cardContainer) return
 
-            customViewEl.querySelectorAll('.action').forEach((el) => {
-                let callback
+            cardContainer.addEventListener('click', (evt) => {
+                let el = evt.target
+                let action = el.dataset.action
+
+                if (el.tagName === 'I') {
+                    el = el.parentElement
+                    action = el.dataset.action
+                }
+                if (!action || action === 'check') return
+
                 let uuid = el.dataset.uuid
 
-                switch (el.dataset.action) {
+                switch (action) {
                     case 'share':
-                        callback = () => fileShare(uuid)
+                        fileShare(uuid)
                         break
                     case 'download':
-                        callback = () => fileDownload(uuid)
+                        fileDownload(uuid)
                         break
                     case 'move':
-                        callback = () => fileMove(uuid)
+                        fileMove(uuid)
                         break
                     case 'recycle':
-                        callback = () => fileRecycle([uuid])
+                        fileRecycle([uuid])
                         break
                 }
-                el.addEventListener('click', callback)
             })
+
+            checkFn(cardContainer)
         }
 
-        // 自定义视图选择行为
-        function checkAction() {
-            let customViewEl = document.querySelector('.fixed-table-custom-view')
-            let cardsEl = customViewEl.querySelectorAll('.check')
-
-            // 选中
-            function _check() {
-                let checkbox = this.querySelector('input[type=checkbox]')
+        // 卡片选中
+        function getCheckFn() {
+            const check = (el) => {
+                let checkbox = el.parentElement.parentElement.querySelector('input[type=checkbox]')
                 let checked = checkbox.checked
                 checkbox.checked = !checked
 
-                if (checked) $storageTable.bootstrapTable('uncheck', this.dataset.index)
-                else $storageTable.bootstrapTable('check', this.dataset.index)
+                if (checked) $storageTable.bootstrapTable('uncheck', el.dataset.index)
+                else $storageTable.bootstrapTable('check', el.dataset.index)
             }
 
+            // 移动端判断
             if (!custom.isMobile()) {
-                // 点击绑定
-                cardsEl.forEach((card) => {
-                    card.addEventListener('click', _check)
-                    card.addEventListener('dblclick', () => {
-                        refresh(card.dataset.uuid, card.dataset.type, card.dataset.name)
-                    })
-                })
-            } else {
-                // 长按绑定
-                let timer
-                let duration = 500
-                let click = true
-                let silent = true
-                let press = false
-                let multiple = false
+                return (container) => {
+                    container.addEventListener('click', (evt) => {
+                        let el = evt.target
 
-                cardsEl.forEach((card) => {
-                    card.addEventListener('touchstart', () => {
+                        if (el.dataset.action !== 'check') return
+
+                        check(el)
+                    })
+                    container.addEventListener('dblclick', (evt) => {
+                        let el = evt.target
+
+                        if (el.dataset.action !== 'check') return
+
+                        refresh(el.dataset.uuid, el.dataset.type, el.dataset.name)
+                    })
+                }
+            } else {
+                return (container) => {
+                    let timer
+                    let duration = 500
+                    let silent = true
+                    let press = false
+                    let multiple = false
+
+                    container.addEventListener('touchstart', () => {
                         timer = setTimeout(() => press = true, duration)
                     })
-                    card.addEventListener('touchmove', () => {
+                    container.addEventListener('touchmove', () => {
                         silent = false
                     })
-                    card.addEventListener('touchend', () => {
+                    container.addEventListener('touchend', (evt) => {
                         clearTimeout(timer)
+                        let el = evt.target
+
+                        if (el.dataset.action !== 'check') {
+                            press = false
+                            silent = true
+                            return
+                        }
 
                         if (!multiple && press && silent) {
-                            let checks = customViewEl.querySelectorAll('input[type=checkbox]')
+                            let checks = container.querySelectorAll('input[type=checkbox]')
                             checks.forEach((el) => el.classList.remove('d-none'))
                             multiple = true
-                            click = false
-                            _check.call(card)
-                        } else if (click && silent) {
-                            refresh(card.dataset.uuid, card.dataset.type, card.dataset.name)
+                            check(el)
                         } else if (multiple && silent) {
-                            _check.call(card)
-                            let checks = customViewEl.querySelectorAll('input[type=checkbox]')
+                            check(el)
+                            let checks = container.querySelectorAll('input[type=checkbox]')
                             if (Array.from(checks).filter((el) => el.checked).length === 0) {
                                 multiple = false
-                                click = true
                                 checks.forEach(el => el.classList.add('d-none'))
                             }
+                        } else if (!press && silent) {
+                            refresh(el.dataset.uuid, el.dataset.type, el.dataset.name)
                         }
 
                         press = false
                         silent = true
                     })
-                })
+                }
             }
         }
 
         // 进入目录或文件详情
         function refresh(uuid, type, name) {
             if (String(type) === 'null') {
-                const callback = () => $storageTable.bootstrapTable('refresh', {
+                $storageTable.bootstrapTable('refresh', {
                     url: _urls.storage,
                     query: {parent: uuid, ordering: storageMenu.getOrdering()}
                 })
-                callback.last = uuid
-                breadcrumb.add(name, callback)
+                breadcrumb.append(name, {uuid: uuid})
             } else {
                 window.open(_urls.fileDetailPath(uuid), '_blank')
             }
@@ -444,13 +459,22 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 文件移动
         function fileMove(uuid) {
-            let moveModalEl = document.getElementById('moveModal')
-            let folderEl = document.getElementById('folderList')
+            let moveModalEl = document.querySelector('#moveModal')
             let moveModal = new mdb.Modal(moveModalEl)
             let moveBtn = moveModalEl.querySelector('#moveBtn')
 
-            folderTree(undefined, uuid).done((data) => {
-                let treeList = new mdb.TreeList(folderEl, data, folderTree, [uuid])
+            getFolderData(undefined, uuid).done((data) => {
+                let treeList = new mdb.TreeList('#folderList', getFolderData)
+                treeList.render(data)
+
+                const callback = () => {
+                    $storageTable.bootstrapTable('remove', {field: 'file_uuid', values: [uuid]})
+                    moveModal.hide()
+                }
+
+                const move = () => {
+                    alterHandler(_urls.fileMove(uuid), 'POST', {dst_uuid: treeList.selected}, callback)
+                }
 
                 moveModal.once('show.mdb.modal', () => {
                     moveBtn.addEventListener('click', move)
@@ -459,17 +483,11 @@ window.addEventListener('DOMContentLoaded', function () {
                     treeList.dispose()
                     moveModal.dispose()
                 }).show()
-
-                function move() {
-                    const callback = () => $storageTable.bootstrapTable('remove', {field: 'file_uuid', values: [uuid]})
-                    alterHandler(_urls.fileMove(uuid), 'POST', {dst_uuid: treeList.selected}, callback)
-                    moveModal.hide()
-                }
             })
         }
 
         // 获取文件夹数据
-        function folderTree(parent, exclude) {
+        function getFolderData(parent, exclude) {
             return $.ajax(_urls.folders, {
                 data: {parent: parent, exclude: exclude},
                 dataFilter: (rawData) => {
@@ -498,7 +516,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 文件分享
         function fileShare(uuid) {
-            let shareModalEl = document.getElementById('shareModal')
+            let shareModalEl = document.querySelector('#shareModal')
             let shareModal = new mdb.Modal(shareModalEl)
             let delta = shareModalEl.querySelector('#delta')
             let summary = shareModalEl.querySelector('#summary')
@@ -575,7 +593,7 @@ window.addEventListener('DOMContentLoaded', function () {
             } else {
                 let formData = new FormData()
                 let name = file.name
-                let parent = breadcrumb.last
+                let parent = breadcrumb.get(-1).dataset.uuid
 
                 if (parent) formData.append('parent', parent)
                 formData.append('file', file)
@@ -604,7 +622,7 @@ window.addEventListener('DOMContentLoaded', function () {
             } else {
                 let formData = new FormData()
                 let name = this.files[0].webkitRelativePath.split('/')[0]
-                let parent = breadcrumb.last
+                let parent = breadcrumb.get(-1).dataset.uuid
 
                 if (parent) formData.append('parent', parent)
 
@@ -629,8 +647,8 @@ window.addEventListener('DOMContentLoaded', function () {
 
         //上传处理
         function uploadHandler(url, data, used) {
-            let uploadBtn = document.getElementById('uploadBtn')
-            let uploadToastEl = document.getElementById('uploadToast')
+            let uploadBtn = document.querySelector('#uploadBtn')
+            let uploadToastEl = document.querySelector('#uploadToast')
             let uploadToast = new mdb.Toast(uploadToastEl, {autohide: false})
             let cancelBtn = uploadToastEl.querySelector('.btn-close')
             let progressbar = uploadToastEl.querySelector('.progress-bar')
@@ -812,7 +830,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 分享设置
         function shareSetup(data, index) {
-            let shareModalEl = document.getElementById('shareModal')
+            let shareModalEl = document.querySelector('#shareModal')
             let shareModal = new mdb.Modal(shareModalEl)
             let delta = shareModalEl.querySelector('#delta')
             let summary = shareModalEl.querySelector('#summary')
@@ -1053,7 +1071,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 提交记录
         function showRecord() {
-            let recordModalEl = document.getElementById('recordModal')
+            let recordModalEl = document.querySelector('#recordModal')
             let recordModal = new mdb.Modal(recordModalEl)
             let messageGroup = recordModalEl.querySelector('#messagePane').firstElementChild
             let applyGroup = recordModalEl.querySelector('#applyPane').firstElementChild
@@ -1075,7 +1093,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 修改头像
         function alterAvatar() {
-            let avatarModalEl = document.getElementById('avatarModal')
+            let avatarModalEl = document.querySelector('#avatarModal')
             let avatarModal = new mdb.Modal(avatarModalEl)
             let avatarEl = avatarModalEl.querySelector('.avatar')
             let previewEl = avatarModalEl.querySelector('.preview')
@@ -1173,7 +1191,7 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 修改个人信息
         function alterProfile() {
-            let modalEl = document.getElementById('profileModal')
+            let modalEl = document.querySelector('#profileModal')
             let modal = new mdb.Modal(modalEl)
             let buttons = modalEl.querySelectorAll('.btn-light')
 

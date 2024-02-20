@@ -118,6 +118,14 @@
         // 获取query参数
         getURLParam(key) {
             return new URLSearchParams(location.search).get(key)
+        },
+
+        isJqXHR(obj) {
+            return typeof obj === 'object' && typeof obj.done === 'function'
+        },
+
+        isPromise(obj) {
+            return typeof obj === 'object' && typeof obj.then === 'function' && typeof obj.catch === 'function'
         }
     }
 
@@ -528,129 +536,177 @@
 
 
     // 面包屑导航
-    mdb.Breadcrumb = function (element, data, callbacks) {
-        this._element = element
-        this.last = callbacks[callbacks.length - 1].last
+    mdb.BreadCrumb = class Breadcrumb {
+        constructor(selector, callback) {
+            this._element = document.querySelector(selector)
+            this._callback = callback
+            this._handler = this._getHandler()
+            this.init()
+        }
 
-        // 绑定事件
-        this._handle = function (element, callback) {
+        // 默认回调函数
+        _getHandler() {
             let that = this
-            element.addEventListener('click', () => {
-                if (!element.classList.contains('active')) {
-                    callback()
-                    that.last = callback.last
+            return (evt) => {
+                let el = evt.target.parentElement
+                let classList = el.classList
 
-                    element.classList.add('active')
-                    element.replaceChild(document.createTextNode(element.textContent), element.firstElementChild)
-                    while (element.nextElementSibling) element.parentElement.removeChild(element.nextElementSibling)
+                if (classList.contains('breadcrumb-item') && !classList.contains('active')) {
+                    let span = domutil.createElement('span', {text: el.textContent})
+                    el.classList.add('active')
+                    el.replaceChild(span, el.firstElementChild)
+                    while (el.nextElementSibling) el.parentElement.removeChild(el.nextElementSibling)
+                    if (that._callback) that._callback(...Object.values(el.dataset))
                 }
-            })
+            }
         }
 
-        // 添加面包屑
-        this.add = function (text, callback) {
-            callback()
-            this.last = callback.last
+        // 初始化事件绑定
+        init() {
+            this._element.addEventListener('click', this._handler)
+        }
 
+        // 添加导航项
+        append(name, data) {
+            let span = domutil.createElement('span', {text: name})
+            let newCrumb = domutil.createElement('li', {class: 'breadcrumb-item active'}, [span])
             let lastCrumb = this._element.lastElementChild
-            let elementChild = domutil.createElement('a', {href: 'javascript:void(0)', text: lastCrumb.textContent})
-            let crumb = domutil.createElement('li', {class: 'breadcrumb-item active', text: text})
 
-            lastCrumb.classList.remove('active')
-            lastCrumb.replaceChild(elementChild, lastCrumb.firstChild)
+            if (lastCrumb) {
+                let anchor = domutil.createElement('a', {href: 'javascript:void(0)', text: lastCrumb.textContent})
+                lastCrumb.classList.remove('active')
+                lastCrumb.replaceChild(anchor, lastCrumb.firstElementChild)
+            }
 
-            this._handle(crumb, callback)
-            this._element.append(crumb)
+            if (typeof data === 'object') {
+                for (const [key, val] of Object.entries(data)) {
+                    newCrumb.dataset[key] = val
+                }
+            }
+            this._element.append(newCrumb)
         }
 
-        // 销毁对象
-        this.dispose = function () {
+        // 获取导航项
+        get(index) {
+            index = index === -1 ? this._element.children.length - 1 : index
+            return this._element.children[index]
+        }
+
+        // 移除
+        dispose() {
+            this._element.removeEventListener('click', this._handler)
             domutil.removeChildren(this._element)
-            this._element = null
-            this.last = null
         }
-
-        // 初始化
-        for (let i = 0; i < data.length - 1; i++) {
-            let inner = domutil.createElement('a', {href: 'javascript:void(0)', text: data[i]})
-            let crumb = domutil.createElement('li', {class: 'breadcrumb-item'}, [inner])
-            this._handle(crumb, callbacks[i])
-            this._element.append(crumb)
-        }
-        let active = domutil.createElement('li', {class: 'breadcrumb-item active', text: data[data.length - 1]})
-        this._handle(active, callbacks[callbacks.length - 1])
-        this._element.append(active)
     }
 
 
     // 树形列表
-    mdb.TreeList = function (element, data, jqxhr, extras) {
-        this._element = element
-        this._active = null
-        this._stack = [undefined]
-        this.selected = undefined
-        this._itemclass = 'list-group-item list-group-item-action px-3 border-0'
-        this._backclass = 'fa-solid fa-chevron-left me-2'
-        this._iconclass = 'fa-solid fa-folder me-2'
-
-        // 渲染列表
-        this._render = function (data, jqxhr) {
-            // 重置列表
-            let that = this
+    mdb.TreeList = class TreeList {
+        constructor(selector, callback) {
+            this._element = document.querySelector(selector)
+            this._callback = callback
             this._active = null
-            domutil.removeChildren(this._element)
+            this.selected = undefined
+            this._stack = [undefined]
+            this._itemclass = 'list-group-item list-group-item-action px-3 border-0'
+            this._backclass = 'fa-solid fa-chevron-left me-2'
+            this._iconclass = 'fa-solid fa-folder me-2'
+            this._clickHandler = this._getClickHandler()
+            this._dblclickHandler = this._getDblclickHandler()
+            this.init()
+        }
 
-            // 渲染上级选项
+        // 默认单击回调
+        _getClickHandler() {
+            let that = this
+            return (evt) => {
+                let el = evt.target
+
+                if (el.tagName === 'I') el = el.parentElement
+                if (!el.classList.contains('list-group-item') || el.classList.contains('active')) return
+
+                if (that._active) that._active.classList.remove('active')
+                that._active = el
+                that.selected = el.dataset.back ? that._stack[that._stack.length - 2] : el.dataset.param
+                el.classList.add('active')
+            }
+        }
+
+        // 默认双击回调
+        _getDblclickHandler() {
+            let that = this
+            return (evt) => {
+                let el = evt.target
+
+                if (el.tagName === 'I') el = el.parentElement
+                if (!el.classList.contains('list-group-item')) return
+
+                let param = el.dataset.param
+                if (el.dataset.back) {
+                    that._stack.pop()
+                    param = that._stack[that._stack.length - 1]
+                } else {
+                    that._stack.push(param)
+                }
+
+                if (that._callback) {
+                    let obj = that._callback(param)
+
+                    if (domutil.isJqXHR(obj)) {
+                        obj.done((data) => {
+                            that.render(data)
+                            that._active = null
+                        })
+                    } else if (domutil.isPromise(obj)) {
+                        obj.then((data) => {
+                            that.render(data)
+                            that._active = null
+                        })
+                    } else {
+                        that.render(obj)
+                        that._active = null
+                    }
+                }
+            }
+        }
+
+        // 初始化绑定
+        init() {
+            this._element.addEventListener('click', this._clickHandler)
+            this._element.addEventListener('dblclick', this._dblclickHandler)
+        }
+
+        // 渲染列表项
+        render(data) {
+            domutil.removeChildren(this._element)
+            // 非根目录下，增加返回上级选项
             if (this._stack.length > 1) {
-                let ancestor = this._stack[this._stack.length - 2]
-                let prev = domutil.createElement('button', {
+                let icon = domutil.createElement('i', {class: this._backclass})
+                let item = domutil.createElement('button', {
+                    dataset: {back: true},
                     class: this._itemclass,
                     type: 'button',
-                }, [domutil.createElement('i', {class: this._backclass}), '返回上一级'])
-
-                prev.addEventListener('dblclick', () => {
-                    jqxhr.call(null, ancestor, ...extras).done((data) => {
-                        that.selected = ancestor
-                        that._stack.pop()
-                        that._render(data, jqxhr)
-                    })
-                })
-                this._element.append(prev)
+                }, [icon, '返回上一级'])
+                this._element.append(item)
             }
 
-            // 渲染其余选项
             for (const datum of data) {
+                let icon = domutil.createElement('i', {class: this._iconclass})
                 let item = domutil.createElement('button', {
+                    dataset: {param: datum.value},
                     class: this._itemclass,
                     type: 'button',
-                }, [domutil.createElement('i', {class: this._iconclass}), datum.text])
-
-                item.addEventListener('click', () => {
-                    if (that._active) that._active.classList.remove('active')
-                    that._active = item
-                    that.selected = datum.value
-                    item.classList.add('active')
-                })
-                item.addEventListener('dblclick', () => {
-                    jqxhr.call(null, datum.value, ...extras).done((data) => {
-                        that._stack.push(datum.value)
-                        that._render(data, jqxhr)
-                    })
-                })
+                }, [icon, datum.text])
                 this._element.append(item)
             }
         }
 
-        // 销毁对象
-        this.dispose = function () {
-            this._element = null
-            this._active = null
-            this._stack = null
-            this.selected = null
+        // 移除
+        dispose() {
+            this._element.removeEventListener('click', this._clickHandler)
+            this._element.removeEventListener('dblclick', this._dblclickHandler)
+            domutil.removeChildren(this._element)
         }
-
-        // 初始化
-        this._render(data, jqxhr)
     }
 
 

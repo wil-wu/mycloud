@@ -692,15 +692,16 @@
                         <use xlink:href="#icon-%icon%"></use>
                     </svg>
                 </div>
-                <a class="check" href="javascript:void (0)"
-                   data-index="%index%" data-type="%type%" data-uuid="%uuid%" data-name="%name%">
+                <a class="check" href="javascript:void (0)">
                     <div class="mask">
                         <div class="form-check m-3">
                             <input class="d-none d-lg-block form-check-input rounded-2" type="checkbox"/>
                         </div>
                     </div>
                     <div class="hover-overlay">
-                        <div class="mask" style="background-color: rgba(0, 0, 0, 0.2)"></div>
+                        <div class="mask" data-action="check" data-index="%index%" data-type="%type%"
+                             data-uuid="%uuid%" data-name="%name%" style="background-color: rgba(0, 0, 0, 0.2)">
+                        </div>
                     </div>
                 </a>
             </div>
