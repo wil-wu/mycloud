@@ -363,9 +363,9 @@
                             <div class="border rounded text-truncate">
                                 <small class="m-2" id="shareLink"></small>
                             </div>
-                            <a href="javascript:void(0)" class="copy-mask">
+                            <a href="javascript:void(0)">
                                 <div class="hover-overlay">
-                                    <div class="mask text-dark" style="background-color: white">复制</div>
+                                    <div class="mask text-dark" data-action="copyLink" style="background-color: white">复制</div>
                                 </div>
                             </a>
                         </div>
@@ -374,14 +374,14 @@
                             <div class="border rounded text-truncate">
                                 <small class="m-2" id="shareKey"></small>
                             </div>
-                            <a href="javascript:void(0)" class="copy-mask">
+                            <a href="javascript:void(0)">
                                 <div class="hover-overlay">
-                                    <div class="mask text-dark" style="background-color: white">复制</div>
+                                    <div class="mask text-dark" data-action="copyKey" style="background-color: white">复制</div>
                                 </div>
                             </a>
                         </div>
                         <div class="text-center mb-3">
-                            <button class="btn btn-primary text-center" id="copyBtn">一键复制</button>
+                            <button class="btn btn-primary text-center" data-action="copyAll">一键复制</button>
                         </div>
                     </div>
                     <div class="col-sm-6">
@@ -395,20 +395,20 @@
                                 7天
                             </button>
                             <ul class="dropdown-menu">
-                                <li><a class="dropdown-item delta-item" data-delta="1" href="javascript:void(0)">1天</a>
+                                <li><a class="dropdown-item delta-item" data-delta="1" data-action="changeExpiry" href="javascript:void(0)">1天</a>
                                 </li>
-                                <li><a class="dropdown-item delta-item" data-delta="7" href="javascript:void(0)">7天</a>
+                                <li><a class="dropdown-item delta-item" data-delta="7" data-action="changeExpiry" href="javascript:void(0)">7天</a>
                                 </li>
-                                <li><a class="dropdown-item delta-item" data-delta="30"
+                                <li><a class="dropdown-item delta-item" data-delta="30" data-action="changeExpiry"
                                        href="javascript:void(0)">30天</a></li>
-                                <li><a class="dropdown-item delta-item" data-delta="999"
+                                <li><a class="dropdown-item delta-item" data-delta="999" data-action="changeExpiry"
                                        href="javascript:void(0)">永久有效</a></li>
                             </ul>
                         </div>
                         <p>补充描述</p>
                         <div class="mb-3">
                             <div class="form-outline">
-                                <textarea class="form-control" id="summary" rows="3" maxlength="100"></textarea>
+                                <textarea class="form-control" id="summary" rows="3" maxlength="100" data-action="changeSummary"></textarea>
                                 <label class="form-label" for="summary">此信息将展示给收到的用户</label>
                             </div>
                         </div>

@@ -553,66 +553,73 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 文件分享
         function fileShare(uuid) {
-            let shareModalEl = document.querySelector('#shareModal')
-            let shareModal = new mdb.Modal(shareModalEl)
-            let delta = shareModalEl.querySelector('#delta')
-            let summary = shareModalEl.querySelector('#summary')
-            let copyBtn = shareModalEl.querySelector('#copyBtn')
-            let masks = shareModalEl.querySelectorAll('.copy-mask')
-            let deltas = shareModalEl.querySelectorAll('.delta-item')
+            let modalEl = document.querySelector('#shareModal')
+            let delta = modalEl.querySelector('#delta')
+            let summary = modalEl.querySelector('#summary')
+            let modal = new mdb.Modal(modalEl)
 
-            let deltaChange = false
+            let expiryChange = false
             let summaryChange = false
 
-            let resolve = () => alert.setType('alert-success').setIcon(_fontawsome.success).setText('复制成功').show()
-            let reject = () => alert.setType('alert-warning').setIcon(_fontawsome.warning).setText('复制失败').show()
-
             // 获取填充密匙
-            $.get(_urls.fileShare(uuid), function (data) {
-                shareModalEl.querySelector('#shareLink').textContent = _urls.fileSharePath(data.signature)
-                shareModalEl.querySelector('#shareKey').textContent = data.secret_key
+            $.get(_urls.fileShare(uuid), (data) => {
+                modalEl.querySelector('#shareKey').textContent = data.secret_key
+                modalEl.querySelector('#shareLink').textContent = _urls.fileSharePath(data.signature)
 
-                // 功能监听
-                function _mask() {
-                    custom.copyText(this.previousElementSibling.textContent.trim(), resolve, reject)
+                // 复制回调
+                const resolve = () => alert.setType('alert-success').setIcon(_fontawsome.success).setText('复制成功').show()
+                const reject = () => alert.setType('alert-warning').setIcon(_fontawsome.warning).setText('复制失败').show()
+
+                // 功能函数
+                const copyKey = () => custom.copyText(data.secret_key, resolve, reject)
+                const copyLink = () => custom.copyText(_urls.fileSharePath(data.signature), resolve, reject)
+                const copyAll = () => custom.copyText(`文件: ${data.file.file_name}\n口令分享: ${data.secret_key}\n链接分享: ${_urls.fileSharePath(data.signature)}`.trim(), resolve, reject)
+                const changeSummary = () => summaryChange = true
+                const changeExpiry = (el) => {
+                    expiryChange = true
+                    delta.dataset.delta = el.dataset.delta
+                    delta.textContent = el.textContent
                 }
 
-                function _copy() {
-                    custom.copyText(`文件: ${data.file.file_name}\n口令分享: ${data.secret_key}\n链接分享: ${_urls.fileSharePath(data.signature)}`.trim()
-                        , resolve, reject)
+                // 点击事件回调
+                const callback = (evt) => {
+                    let el = evt.target
+                    let action = el.dataset.action
+
+                    if (!action) return
+
+                    switch (action) {
+                        case 'copyKey':
+                            copyKey()
+                            break
+                        case 'copyLink':
+                            copyLink()
+                            break
+                        case 'copyAll':
+                            copyAll()
+                            break
+                        case 'changeSummary':
+                            changeSummary()
+                            break
+                        case 'changeExpiry':
+                            changeExpiry(el)
+                            break
+                    }
                 }
 
-                function _delta() {
-                    deltaChange = true
-                    delta.dataset.delta = this.dataset.delta
-                    delta.textContent = this.textContent
-                }
-
-                function _summary() {
-                    summaryChange = true
-                }
-
-                // 功能键监听和卸载
-                shareModal.once('show.mdb.modal', () => {
-                    masks.forEach((mask) => mask.addEventListener('click', _mask))
-                    deltas.forEach((item) => item.addEventListener('click', _delta))
-                    copyBtn.addEventListener('click', _copy)
-                    summary.addEventListener('change', _summary)
-
+                // 绑定监听和卸载
+                modal.once('show.mdb.modal', () => {
+                    modalEl.addEventListener('click', callback)
                 }).once('hidden.mdb.modal', () => {
-                    masks.forEach((mask) => mask.removeEventListener('click', _mask))
-                    deltas.forEach((item) => item.removeEventListener('click', _delta))
-                    copyBtn.removeEventListener('click', _copy)
-                    summary.removeEventListener('change', _summary)
+                    modalEl.removeEventListener('click', callback)
 
-                    if (deltaChange || summaryChange) {
+                    if (expiryChange || summaryChange) {
                         alterHandler(_urls.shareDetail(data.pk), 'PATCH', {
-                            delta: deltaChange ? Number(delta.dataset.delta) : undefined,
+                            delta: expiryChange ? Number(delta.dataset.delta) : undefined,
                             summary: summaryChange ? summary.value : undefined
                         })
                     }
-                    shareModal.dispose()
-
+                    modal.dispose()
                 }).show()
             })
         }
@@ -842,8 +849,7 @@ window.addEventListener('DOMContentLoaded', function () {
         function linkCopy(data) {
             let resolve = () => alert.setType('alert-success').setIcon(_fontawsome.success).setText('复制成功').show()
             let reject = () => alert.setType('alert-warning').setIcon(_fontawsome.warning).setText('复制失败').show()
-            custom.copyText(`文件: ${data.file.file_name}\n口令分享: ${data.secret_key}\n链接分享: ${_urls.fileSharePath(data.signature)}`.trim()
-                , resolve, reject)
+            custom.copyText(`文件: ${data.file.file_name}\n口令分享: ${data.secret_key}\n链接分享: ${_urls.fileSharePath(data.signature)}`.trim(), resolve, reject)
         }
 
         // 分享删除
@@ -867,59 +873,66 @@ window.addEventListener('DOMContentLoaded', function () {
 
         // 分享设置
         function shareSetup(data, index) {
-            let shareModalEl = document.querySelector('#shareModal')
-            let shareModal = new mdb.Modal(shareModalEl)
-            let delta = shareModalEl.querySelector('#delta')
-            let summary = shareModalEl.querySelector('#summary')
-            let copyBtn = shareModalEl.querySelector('#copyBtn')
-            let masks = shareModalEl.querySelectorAll('.copy-mask')
-            let deltas = shareModalEl.querySelectorAll('.delta-item')
+            let modalEl = document.querySelector('#shareModal')
+            let delta = modalEl.querySelector('#delta')
+            let summary = modalEl.querySelector('#summary')
+            let modal = new mdb.Modal(modalEl)
 
-            let deltaChange = false
+            let expiryChange = false
             let summaryChange = false
 
-            // 设置密匙
-            shareModalEl.querySelector('#shareLink').textContent = _urls.fileSharePath(data.signature)
-            shareModalEl.querySelector('#shareKey').textContent = data.secret_key
+            modalEl.querySelector('#shareKey').textContent = data.secret_key
+            modalEl.querySelector('#shareLink').textContent = _urls.fileSharePath(data.signature)
             summary.value = data.summary
 
-            let resolve = () => alert.setType('alert-success').setIcon(_fontawsome.success).setText('复制成功').show()
-            let reject = () => alert.setType('alert-warning').setIcon(_fontawsome.warning).setText('复制失败').show()
+            // 复制回调
+            const resolve = () => alert.setType('alert-success').setIcon(_fontawsome.success).setText('复制成功').show()
+            const reject = () => alert.setType('alert-warning').setIcon(_fontawsome.warning).setText('复制失败').show()
 
-            // 功能监听
-            function _mask() {
-                custom.copyText(this.previousElementSibling.textContent.trim(), resolve, reject)
+            // 功能函数
+            const copyKey = () => custom.copyText(data.secret_key, resolve, reject)
+            const copyLink = () => custom.copyText(_urls.fileSharePath(data.signature), resolve, reject)
+            const copyAll = () => custom.copyText(`文件: ${data.file.file_name}\n口令分享: ${data.secret_key}\n链接分享: ${_urls.fileSharePath(data.signature)}`.trim(), resolve, reject)
+            const changeSummary = () => summaryChange = true
+            const changeExpiry = (el) => {
+                expiryChange = true
+                delta.dataset.delta = el.dataset.delta
+                delta.textContent = el.textContent
             }
 
-            function _copy() {
-                custom.copyText(`文件: ${data.file.file_name}\n口令分享: ${data.secret_key}\n链接分享: ${_urls.fileSharePath(data.signature)}`.trim()
-                    , resolve, reject)
+            // 点击事件回调
+            const callback = (evt) => {
+                let el = evt.target
+                let action = el.dataset.action
+
+                if (!action) return
+
+                switch (action) {
+                    case 'copyKey':
+                        copyKey()
+                        break
+                    case 'copyLink':
+                        copyLink()
+                        break
+                    case 'copyAll':
+                        copyAll()
+                        break
+                    case 'changeSummary':
+                        changeSummary()
+                        break
+                    case 'changeExpiry':
+                        changeExpiry(el)
+                        break
+                }
             }
 
-            function _delta() {
-                deltaChange = true
-                delta.dataset.delta = this.dataset.delta
-                delta.textContent = this.textContent
-            }
-
-            function _summary() {
-                summaryChange = true
-            }
-
-            // 功能键监听和卸载
-            shareModal.once('show.mdb.modal', () => {
-                masks.forEach((mask) => mask.addEventListener('click', _mask))
-                deltas.forEach((item) => item.addEventListener('click', _delta))
-                copyBtn.addEventListener('click', _copy)
-                summary.addEventListener('change', _summary)
-
+            // 绑定监听和卸载
+            modal.once('show.mdb.modal', () => {
+                modalEl.addEventListener('click', callback)
             }).once('hidden.mdb.modal', () => {
-                masks.forEach((mask) => mask.removeEventListener('click', _mask))
-                deltas.forEach((item) => item.removeEventListener('click', _delta))
-                copyBtn.removeEventListener('click', _copy)
-                summary.removeEventListener('change', _summary)
+                modalEl.removeEventListener('click', callback)
 
-                if (deltaChange || summaryChange) {
+                if (expiryChange || summaryChange) {
                     const callback = (data) => $historyTable.bootstrapTable('updateRow', {
                         index: index,
                         row: {
@@ -928,12 +941,11 @@ window.addEventListener('DOMContentLoaded', function () {
                         }
                     })
                     alterHandler(_urls.shareDetail(data.pk), 'PATCH', {
-                        delta: deltaChange ? Number(delta.dataset.delta) : undefined,
+                        delta: expiryChange ? Number(delta.dataset.delta) : undefined,
                         summary: summaryChange ? summary.value : undefined
                     }, callback)
                 }
-                shareModal.dispose()
-
+                modal.dispose()
             }).show()
         }
     }
