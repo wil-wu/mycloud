@@ -468,7 +468,7 @@ window.addEventListener('DOMContentLoaded', function () {
             let moveBtn = moveModalEl.querySelector('#moveBtn')
 
             getFolderData(undefined, uuid).done((data) => {
-                let treeList = new mdb.TreeList('#folderList', getFolderData)
+                let treeList = new mdb.TreeList('#folderList', getFolderData, uuid)
                 treeList.render(data)
 
                 const callback = () => {

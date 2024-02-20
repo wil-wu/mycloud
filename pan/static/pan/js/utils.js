@@ -607,9 +607,10 @@
 
     // 树形列表
     mdb.TreeList = class TreeList {
-        constructor(selector, callback) {
+        constructor(selector, callback, ...extra) {
             this._element = document.querySelector(selector)
             this._callback = callback
+            this._extra = extra
             this._active = null
             this.selected = undefined
             this._stack = [undefined]
@@ -655,7 +656,7 @@
                 }
 
                 if (that._callback) {
-                    let obj = that._callback(param)
+                    let obj = that._callback(param, ...this._extra)
 
                     if (domutil.isJqXHR(obj)) {
                         obj.done((data) => {
