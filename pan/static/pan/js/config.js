@@ -7,9 +7,11 @@
         profile: JSON.parse(localStorage.getItem('profile')),
         terms: JSON.parse(localStorage.getItem('terms')),
         media: {
-            video: new Set(['mp4', 'webm']),
-            audio: new Set(['mp3', 'wav', 'ogg', 'opus', 'aac', 'm4a', 'm4b']),
-            image: new Set(['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'])
+            video: ['mp4', 'webm'],
+            audio: ['mp3', 'wav', 'ogg', 'opus', 'aac', 'm4a', 'm4b'],
+            image: ['jpg', 'jpeg', 'png', 'webp', 'svg', 'gif'],
+            word: ['docx', 'doc'],
+            pdf: ['pdf'],
         },
         'DATA_UPLOAD_MAX_NUMBER_FIELDS': 1000,
         'MAX_UPLOAD_FILE_SIZE': 268435456,

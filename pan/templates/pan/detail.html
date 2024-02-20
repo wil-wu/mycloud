@@ -7,6 +7,7 @@
     <link href="{% static 'pan/vendor/mdb/mdb.min.css' %}" rel="stylesheet">
     <link href="{% static 'pan/vendor/font-awesome/all.min.css' %}" rel="stylesheet">
     <link href="{% static 'pan/vendor/videojs/video-js.min.css' %}" rel="stylesheet">
+    <link href="{% static 'pan/vendor/viewerjs/viewer.min.css' %}" rel="stylesheet" >
     <link href="{% static 'pan/css/style.css' %}" rel="stylesheet">
     <title>详情</title>
 </head>
@@ -20,19 +21,19 @@
             <li class="nav-item me-3">
                 <a class="nav-link" data-mdb-toggle="tooltip" data-mdb-placement="bottom" data-action="share"
                    title="分享">
-                    <i class="fa-solid fa-share-nodes"></i>
+                    <i class="fa-solid fa-share-nodes" data-action="share"></i>
                 </a>
             </li>
             <li class="nav-item me-3">
                 <a class="nav-link" data-mdb-toggle="tooltip" data-mdb-placement="bottom" data-action="download"
                    title="下载">
-                    <i class="fa-solid fa-circle-down"></i>
+                    <i class="fa-solid fa-circle-down" data-action="download"></i>
                 </a>
             </li>
             <li class="nav-item me-4">
                 <a class="nav-link" data-mdb-toggle="tooltip" data-mdb-placement="bottom" data-action="info"
                    title="信息">
-                    <i class="fa-solid fa-file-lines"></i>
+                    <i class="fa-solid fa-file-lines" data-action="info"></i>
                 </a>
             </li>
         </ul>
@@ -41,16 +42,10 @@
 <div class="container-fluid" style="height: calc(100% - 61px)">
     <div class="row h-100">
         <div class="col-md-9 h-100 bg-light">
-            <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none" id="notSupport">
+            <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none" id="deniedTip">
                 <div class="text-center">
-                    <p>暂不支持此类文件预览</p>
-                    <button class="btn btn-info">立即下载</button>
-                </div>
-            </div>
-            <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none" id="notPermission">
-                <div class="text-center">
-                    <p>由于文件大小不支持在线预览</p>
-                    <button class="btn btn-info">立即下载</button>
+                    <p></p>
+                    <a class="btn btn-info">立即下载</a>
                 </div>
             </div>
             <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none" id="audioPlayer">
@@ -81,6 +76,7 @@
             <div class="h-100 w-auto d-flex justify-content-center align-items-center d-none">
                 <img class="mw-100 mh-100" id="image" src="" alt="..."/>
             </div>
+            <div class="h-100 text-center d-none overflow-scroll" id="officeViewer"></div>
             <video class="h-100 w-auto video-js d-none" id="videoPlayer"></video>
         </div>
         <div class="col-md-3 h-100 border-start p-3">
@@ -91,10 +87,10 @@
                         <use></use>
                     </svg>
                 </div>
-                <p>文件名：</p>
-                <p>文件类型：</p>
-                <p>文件大小：</p>
-                <p>上传时间：</p>
+                <p></p>
+                <p></p>
+                <p></p>
+                <p></p>
             </div>
         </div>
     </div>
@@ -114,6 +110,10 @@
 <script src="{% static 'pan/vendor/videojs/video.min.js' %}"></script>
 <script src="{% static 'pan/vendor/videojs/zh-CN.js' %}"></script>
 <script src="{% static 'pan/vendor/iconfont/iconfont.js' %}"></script>
+<script src="{% static 'pan/vendor/jszip/jszip.min.js' %}"></script>
+<script src="{% static 'pan/vendor/docx-preview/docx-preview.min.js' %}"></script>
+<script src="{% static 'pan/vendor/pdfjs/pdf.min.js' %}"></script>
+<script src="{% static 'pan/vendor/viewerjs/viewer.min.js' %}"></script>
 <script src="{% static 'pan/js/utils.js' %}"></script>
 <script src="{% static 'pan/js/config.js' %}"></script>
 <script src="{% static 'pan/js/detail.js' %}"></script>
