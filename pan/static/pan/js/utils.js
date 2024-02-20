@@ -324,6 +324,11 @@
                                 </a>
                             </li>
                             <li>
+                                <a class="rename dropdown-item" href="javascript:void(0)">
+                                    <i class="fa-solid fa-font me-2"></i>重命名
+                                </a>
+                            </li>
+                            <li>
                                 <a class="recycle dropdown-item" href="javascript:void(0)">
                                     <i class="fa-solid fa-trash me-2"></i>删除
                                 </a>

@@ -342,6 +342,23 @@ class FileViewSet(mixins.ListModelMixin,
     def get_queryset(self):
         return self.request.user.files.select_related('file_type').filter(is_del=False)
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+
+        if serializer.is_valid():
+            self.perform_update(serializer)
+            if getattr(instance, '_prefetched_objects_cache', None):
+                instance._prefetched_objects_cache = {}
+            result = AjaxData(msg='文件已重命名', data=serializer.data)
+            return Response(result)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_update(self, serializer):
+        serializer.save(update_by=self.request.user)
+
     @action(methods=['GET'], detail=False)
     def storage(self, request):
         parent = request.query_params.get('parent', self.request.session['root'])

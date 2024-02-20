@@ -230,6 +230,9 @@ class GenericFile(BaseModel):
                 GenericFile.objects.bulk_update(folders, ('file_size',))
 
             if self.file_name != self._loaded_values['file_name']:
+                Path(settings.PAN_ROOT / self.file_path).rename(
+                    settings.PAN_ROOT / self.folder.file_path / self.file_name
+                )
                 recursive_update(self, self.folder)
 
             if objs:

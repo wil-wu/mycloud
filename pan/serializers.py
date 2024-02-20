@@ -8,11 +8,25 @@ from pan.models import GenericFile, RecycleFile, FileShare, Notice, Profile, Let
 
 class FileSerializer(serializers.ModelSerializer):
     file_type = serializers.StringRelatedField()
-    create_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M', read_only=True)
+    create_time = serializers.DateTimeField(format='%Y-%m-%d %H:%M')
 
     class Meta:
         model = GenericFile
         fields = ['file_name', 'file_uuid', 'file_type', 'file_size', 'create_time']
+        read_only_fields = ['file_uuid', 'file_type', 'file_size', 'create_time']
+
+    def validate_file_name(self, value):
+        """
+        文件名重名检查
+        """
+        if self.instance:
+            name = value + (str(self.instance.file_type) if self.instance.file_type else '')
+            if GenericFile.objects.filter(folder=self.instance.folder,
+                                          file_name=name).exclude(pk=self.instance.pk).exists():
+                raise serializers.ValidationError({'file_name': '文件夹下存在同名文件'})
+            else:
+                return name
+        return value
 
 
 class RecycleSerializer(serializers.ModelSerializer):

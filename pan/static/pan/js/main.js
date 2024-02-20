@@ -249,6 +249,7 @@ window.addEventListener('DOMContentLoaded', function () {
                     'click .share': (e, value, row) => fileShare(row.file_uuid),
                     'click .download': (e, value, row) => fileDownload(row.file_uuid),
                     'click .move': (e, value, row) => fileMove(row.file_uuid),
+                    'click .rename': (e, value, row, index) => fileRename(row.file_uuid, row.file_name, index),
                     'click .recycle': (e, value, row) => fileRecycle([row.file_uuid]),
                 },
             }],
@@ -358,6 +359,9 @@ window.addEventListener('DOMContentLoaded', function () {
                         break
                     case 'move':
                         fileMove(uuid)
+                        break
+                    case 'rename':
+                        fileRename(uuid, el.dataset.name, el.dataset.index)
                         break
                     case 'recycle':
                         fileRecycle([uuid])
@@ -512,6 +516,39 @@ window.addEventListener('DOMContentLoaded', function () {
         function fileDownload(uuid) {
             toast.setIcon(_fontawsome.info).setText('正在打包请稍等').show()
             location.href = _urls.fileBinary(uuid)
+        }
+
+        // 文件重命名
+        function fileRename(uuid, name, index) {
+            let modalEl = document.querySelector('#filenameModal')
+            let form = modalEl.querySelector('form')
+
+            let validation = custom.getInitial(form)
+            let modal = new mdb.Modal(modalEl)
+            let parts = name.split('.')
+            name = parts.length === 1 ? name : parts.slice(0, -1).join('.')
+
+            const callback = (data) => {
+                $storageTable.bootstrapTable('updateRow', {index: index, row: {'file_name': data.file_name}})
+                modal.hide()
+            }
+
+            const submit = (evt) => {
+                evt.preventDefault()
+                if (!form.checkValidity()) {
+                    custom.setInitial(form, validation)
+                } else {
+                    alterHandler(_urls.fileDetail(uuid), 'PATCH', domutil.serializeForm(form), callback)
+                }
+            }
+
+            modal.once('show.mdb.modal', () => {
+                form.addEventListener('submit', submit)
+                form.querySelector('input[name=file_name]').value = name
+            }).once('hidden.mdb.modal', () => {
+                form.removeEventListener('submit', submit)
+                modal.dispose()
+            }).show()
         }
 
         // 文件分享

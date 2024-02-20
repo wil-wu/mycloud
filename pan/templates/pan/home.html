@@ -682,6 +682,31 @@
         </div>
     </div>
 </div>
+<div class="modal fade" id="filenameModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">修改文件名</h5>
+                <button type="button" class="btn-close" data-mdb-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form class="row g-3" novalidate>
+                    <div class="col-12">
+                        <div class="form-outline">
+                            <input type="text" id="_filename" name="file_name" class="form-control" maxlength="100" required>
+                            <label class="form-label" for="_filename">文件名</label>
+                            <div class="invalid-feedback">不为空且长度小于100</div>
+                        </div>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="reset" class="btn btn-secondary">取消</button>
+                        <button type="submit" class="btn btn-primary">确认</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 <template id="cardTemplate">
     <div class="col">
         <div class="card">
@@ -727,6 +752,10 @@
                         <li><a class="action dropdown-item" href="javascript:void(0)"
                                data-action="move" data-uuid="%uuid%">
                             <i class="fa-solid fa-folder-open me-1"></i>移动</a>
+                        </li>
+                        <li><a class="action dropdown-item" href="javascript:void(0)"
+                               data-action="rename" data-uuid="%uuid%" data-name="%name%" data-index="%index%">
+                            <i class="fa-solid fa-font me-2"></i>重命名</a>
                         </li>
                         <li><a class="action dropdown-item" href="javascript:void(0)"
                                data-action="recycle" data-uuid="%uuid%">
