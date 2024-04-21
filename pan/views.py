@@ -133,6 +133,7 @@ class PasswordView(APIView):
         serializer = PasswordSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             request.user.set_password(serializer.validated_data['password1'])
+            request.user.save()
             result = AjaxData(msg='修改成功')
             return Response(result)
         else:
@@ -354,7 +355,8 @@ class FileViewSet(mixins.ListModelMixin,
             result = AjaxData(msg='文件已重命名', data=serializer.data)
             return Response(result)
         else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            result = AjaxData(400, str(serializer.errors['file_name'][0]))
+            return Response(result)
 
     def perform_update(self, serializer):
         serializer.save(update_by=self.request.user)
@@ -656,7 +658,7 @@ class FileShareViewSet(mixins.ListModelMixin,
     def perform_update(self, serializer):
         delta = self.request.data.get('delta')
         user = self.request.user
-        if delta and type(delta) == int:
+        if delta and isinstance(delta, int):
             serializer.save(expire_time=timezone.now() + timedelta(days=delta), update_by=user)
         else:
             serializer.save(update_by=user)

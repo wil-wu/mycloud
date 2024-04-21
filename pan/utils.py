@@ -74,8 +74,8 @@ class AjaxData(dict):
     ajax 结果集
     """
     def __init__(self, code=200, msg='', data=None, errors=None):
-        assert type(code) == int
-        assert type(msg) == str
+        assert isinstance(code, int)
+        assert isinstance(msg, str)
         if data is not None:
             assert isinstance(data, dict)
         if errors is not None:

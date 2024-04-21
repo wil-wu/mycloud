@@ -1109,7 +1109,7 @@ window.addEventListener('DOMContentLoaded', function () {
                     callback = showRecord
                     break
                 case 'password':
-                    callback = () => alterModal('passwordModal', _urls.password, 'PATCH')
+                    callback = () => alterModal('passwordModal', _urls.password, 'POST')
                     break
                 case 'letter':
                     callback = () => alterModal('letterModal', _urls.letter, 'POST')

@@ -72,6 +72,7 @@
         login: `${_domain}/login`,
         logout: `${_domain}/logout`,
         register: `${_domain}/register`,
+        password: `${_domain}/password`,
         reset: `${_domain}/reset`,
         fileUpload: `${_domain}/file/upload`,
         folderUpload: `${_domain}/folder/upload`,

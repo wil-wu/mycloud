@@ -23,7 +23,7 @@ class FileSerializer(serializers.ModelSerializer):
             name = value + (str(self.instance.file_type) if self.instance.file_type else '')
             if GenericFile.objects.filter(folder=self.instance.folder,
                                           file_name=name).exclude(pk=self.instance.pk).exists():
-                raise serializers.ValidationError({'file_name': '文件夹下存在同名文件'})
+                raise serializers.ValidationError('文件夹下存在同名文件')
             else:
                 return name
         return value

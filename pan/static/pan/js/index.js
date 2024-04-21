@@ -49,6 +49,7 @@ window.addEventListener('DOMContentLoaded', function () {
                     clearInterval(timer)
                     btn.textContent = '确认'
                     btn.disabled = false
+                    return
                 }
                 btn.textContent = age
                 age--
